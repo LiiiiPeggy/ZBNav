@@ -1,0 +1,216 @@
+[0.065s] Invoking command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake /root/work/wyx/lqp/Codes/robosense_ws/src/rslidar_msg -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg
+[0.181s] -- The C compiler identification is GNU 11.4.0
+[0.330s] -- The CXX compiler identification is GNU 11.4.0
+[0.352s] -- Detecting C compiler ABI info
+[0.571s] -- Detecting C compiler ABI info - done
+[0.607s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.608s] -- Detecting C compile features
+[0.610s] -- Detecting C compile features - done
+[0.620s] -- Detecting CXX compiler ABI info
+[0.831s] -- Detecting CXX compiler ABI info - done
+[0.882s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.883s] -- Detecting CXX compile features
+[0.885s] -- Detecting CXX compile features - done
+[0.894s] -- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)
+[1.240s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[1.389s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.479s] -- Found std_msgs: 4.9.0 (/opt/ros/humble/share/std_msgs/cmake)
+[1.533s] -- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[1.540s] -- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[1.551s] -- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[1.567s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.587s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.623s] -- Found rclcpp: 16.0.17 (/opt/ros/humble/share/rclcpp/cmake)
+[1.672s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[1.675s] -- Found rmw_fastrtps_cpp: 6.2.9 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[1.837s] -- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.2")  
+[1.908s] -- Found FastRTPS: /opt/ros/humble/include  
+[1.999s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[2.011s] -- Looking for pthread.h
+[2.219s] -- Looking for pthread.h - found
+[2.219s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[2.424s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[2.428s] -- Found Threads: TRUE  
+[2.552s] -- Found rosidl_default_generators: 1.2.0 (/opt/ros/humble/share/rosidl_default_generators/cmake)
+[3.212s] -- Found ament_cmake_ros: 0.10.0 (/opt/ros/humble/share/ament_cmake_ros/cmake)
+[4.283s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[4.717s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[4.785s] -- Found PythonInterp: /usr/bin/python3 (found suitable version "3.10.12", minimum required is "3.6") 
+[4.795s] -- Found python_cmake_module: 0.10.0 (/opt/ros/humble/share/python_cmake_module/cmake)
+[4.892s] -- Found PythonLibs: /usr/lib/aarch64-linux-gnu/libpython3.10.so (found suitable version "3.10.12", minimum required is "3.5") 
+[4.894s] -- Using PYTHON_EXECUTABLE: /usr/bin/python3
+[4.894s] -- Using PYTHON_INCLUDE_DIRS: /usr/include/python3.10
+[4.895s] -- Using PYTHON_LIBRARIES: /usr/lib/aarch64-linux-gnu/libpython3.10.so
+[4.961s] -- Found PythonExtra: .so  
+[5.130s] -- Found ament_lint_auto: 0.12.14 (/opt/ros/humble/share/ament_lint_auto/cmake)
+[5.181s] -- Added test 'copyright' to check source files copyright and LICENSE
+[5.189s] -- Added test 'lint_cmake' to check CMake code style
+[5.196s] -- Added test 'xmllint' to check XML markup files
+[5.203s] -- Configuring done
+[5.250s] -- Generating done
+[5.264s] -- Build files have been written to: /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg
+[5.286s] Invoked command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake /root/work/wyx/lqp/Codes/robosense_ws/src/rslidar_msg -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg
+[5.294s] Invoking command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg -- -j8 -l8
+[5.409s] [  3%] [34m[1mGenerating C code for ROS interfaces[0m
+[5.429s] [  3%] Built target ament_cmake_python_symlink_rslidar_msg
+[5.438s] [  6%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[5.731s] running egg_info
+[5.732s] creating rslidar_msg.egg-info
+[5.732s] writing rslidar_msg.egg-info/PKG-INFO
+[5.733s] writing dependency_links to rslidar_msg.egg-info/dependency_links.txt
+[5.733s] writing top-level names to rslidar_msg.egg-info/top_level.txt
+[5.734s] writing manifest file 'rslidar_msg.egg-info/SOURCES.txt'
+[5.737s] reading manifest file 'rslidar_msg.egg-info/SOURCES.txt'
+[5.738s] writing manifest file 'rslidar_msg.egg-info/SOURCES.txt'
+[5.809s] [  6%] Built target ament_cmake_python_build_rslidar_msg_egg
+[5.817s] [  6%] Built target rslidar_msg__cpp
+[5.818s] [  9%] [32mBuilding C object CMakeFiles/rslidar_msg__rosidl_generator_c.dir/rosidl_generator_c/rslidar_msg/msg/detail/rslidar_packet__functions.c.o[0m
+[5.832s] [ 12%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[5.846s] [ 19%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[5.846s] [ 19%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[5.936s] [ 22%] [32m[1mLinking C shared library librslidar_msg__rosidl_generator_c.so[0m
+[6.036s] [ 22%] Built target rslidar_msg__rosidl_generator_c
+[6.053s] [ 25%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[6.062s] [ 32%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[6.062s] [ 32%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[6.242s] [ 35%] [32mBuilding CXX object CMakeFiles/rslidar_msg__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/rslidar_msg/msg/rslidar_packet__type_support.cpp.o[0m
+[6.247s] [ 38%] [32mBuilding CXX object CMakeFiles/rslidar_msg__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/rslidar_msg/msg/detail/rslidar_packet__type_support.cpp.o[0m
+[6.248s] [ 41%] [32mBuilding CXX object CMakeFiles/rslidar_msg__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/rslidar_msg/msg/detail/dds_fastrtps/rslidar_packet__type_support.cpp.o[0m
+[6.489s] [ 45%] [32mBuilding C object CMakeFiles/rslidar_msg__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/rslidar_msg/msg/detail/rslidar_packet__type_support.c.o[0m
+[6.493s] [ 48%] [32mBuilding CXX object CMakeFiles/rslidar_msg__rosidl_typesupport_c.dir/rosidl_typesupport_c/rslidar_msg/msg/rslidar_packet__type_support.cpp.o[0m
+[6.524s] [ 51%] [32mBuilding CXX object CMakeFiles/rslidar_msg__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/rslidar_msg/msg/detail/rslidar_packet__type_support_c.cpp.o[0m
+[6.594s] [ 54%] [32m[1mLinking CXX shared library librslidar_msg__rosidl_typesupport_c.so[0m
+[6.627s] [ 58%] [32m[1mLinking C shared library librslidar_msg__rosidl_typesupport_introspection_c.so[0m
+[6.682s] [ 58%] Built target rslidar_msg__rosidl_typesupport_c
+[6.692s] [ 58%] Built target rslidar_msg__rosidl_typesupport_introspection_c
+[6.774s] [ 61%] [32m[1mLinking CXX shared library librslidar_msg__rosidl_typesupport_cpp.so[0m
+[6.915s] [ 64%] [32m[1mLinking CXX shared library librslidar_msg__rosidl_typesupport_introspection_cpp.so[0m
+[6.920s] [ 64%] Built target rslidar_msg__rosidl_typesupport_cpp
+[7.008s] [ 67%] [32m[1mLinking CXX shared library librslidar_msg__rosidl_typesupport_fastrtps_cpp.so[0m
+[7.056s] [ 67%] Built target rslidar_msg__rosidl_typesupport_introspection_cpp
+[7.120s] [ 70%] [32m[1mLinking CXX shared library librslidar_msg__rosidl_typesupport_fastrtps_c.so[0m
+[7.181s] [ 70%] Built target rslidar_msg__rosidl_typesupport_fastrtps_cpp
+[7.295s] [ 70%] Built target rslidar_msg__rosidl_typesupport_fastrtps_c
+[7.350s] [ 70%] Built target rslidar_msg
+[7.412s] [ 74%] [34m[1mGenerating Python code for ROS interfaces[0m
+[7.880s] [ 74%] Built target rslidar_msg__py
+[7.946s] [ 77%] [32mBuilding C object CMakeFiles/rslidar_msg__rosidl_generator_py.dir/rosidl_generator_py/rslidar_msg/msg/_rslidar_packet_s.c.o[0m
+[8.215s] [ 80%] [32m[1mLinking C shared library rosidl_generator_py/rslidar_msg/librslidar_msg__rosidl_generator_py.so[0m
+[8.335s] [ 80%] Built target rslidar_msg__rosidl_generator_py
+[8.376s] [ 83%] [32mBuilding C object CMakeFiles/rslidar_msg__rosidl_typesupport_introspection_c__pyext.dir/rosidl_generator_py/rslidar_msg/_rslidar_msg_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[8.381s] [ 87%] [32mBuilding C object CMakeFiles/rslidar_msg__rosidl_typesupport_fastrtps_c__pyext.dir/rosidl_generator_py/rslidar_msg/_rslidar_msg_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[8.395s] [ 90%] [32mBuilding C object CMakeFiles/rslidar_msg__rosidl_typesupport_c__pyext.dir/rosidl_generator_py/rslidar_msg/_rslidar_msg_s.ep.rosidl_typesupport_c.c.o[0m
+[8.539s] [ 93%] [32m[1mLinking C shared library rosidl_generator_py/rslidar_msg/rslidar_msg_s__rosidl_typesupport_introspection_c.cpython-310-aarch64-linux-gnu.so[0m
+[8.540s] [ 96%] [32m[1mLinking C shared library rosidl_generator_py/rslidar_msg/rslidar_msg_s__rosidl_typesupport_fastrtps_c.cpython-310-aarch64-linux-gnu.so[0m
+[8.543s] [100%] [32m[1mLinking C shared library rosidl_generator_py/rslidar_msg/rslidar_msg_s__rosidl_typesupport_c.cpython-310-aarch64-linux-gnu.so[0m
+[8.602s] [100%] Built target rslidar_msg__rosidl_typesupport_introspection_c__pyext
+[8.638s] [100%] Built target rslidar_msg__rosidl_typesupport_c__pyext
+[8.645s] [100%] Built target rslidar_msg__rosidl_typesupport_fastrtps_c__pyext
+[8.686s] Invoked command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg -- -j8 -l8
+[8.716s] Invoking command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg
+[8.740s] -- Install configuration: ""
+[8.744s] -- Execute custom install script
+[8.745s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/ament_index/resource_index/rosidl_interfaces/rslidar_msg
+[8.761s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__functions.h
+[8.773s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__struct.h
+[8.785s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__type_support.h
+[8.812s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rosidl_generator_c__visibility_control.h
+[8.841s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rslidar_packet.h
+[8.860s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/library_path.sh
+[8.886s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/library_path.dsv
+[8.916s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__rosidl_typesupport_fastrtps_c.h
+[8.947s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[8.975s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__builder.hpp
+[8.993s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__struct.hpp
+[9.020s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__traits.hpp
+[9.047s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__type_support.hpp
+[9.076s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rosidl_generator_cpp__visibility_control.hpp
+[9.107s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rslidar_packet.hpp
+[9.135s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__rosidl_typesupport_fastrtps_cpp.hpp
+[9.168s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[9.186s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__rosidl_typesupport_introspection_c.h
+[9.212s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[9.238s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/include/rslidar_msg/rslidar_msg/msg/detail/rslidar_packet__rosidl_typesupport_introspection_cpp.hpp
+[9.272s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/pythonpath.sh
+[9.290s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/pythonpath.dsv
+[9.317s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg-0.0.0-py3.10.egg-info/PKG-INFO
+[9.341s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg-0.0.0-py3.10.egg-info/SOURCES.txt
+[9.369s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg-0.0.0-py3.10.egg-info/dependency_links.txt
+[9.394s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg-0.0.0-py3.10.egg-info/top_level.txt
+[9.424s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/__init__.py
+[9.458s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/_rslidar_msg_s.ep.rosidl_typesupport_c.c
+[9.486s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/_rslidar_msg_s.ep.rosidl_typesupport_fastrtps_c.c
+[9.506s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/_rslidar_msg_s.ep.rosidl_typesupport_introspection_c.c
+[9.533s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/librslidar_msg__rosidl_generator_py.so
+[9.567s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/msg/__init__.py
+[9.594s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/msg/_rslidar_packet.py
+[9.622s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/msg/_rslidar_packet_s.c
+[9.651s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/rslidar_msg_s__rosidl_typesupport_c.cpython-310-aarch64-linux-gnu.so
+[9.675s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/rslidar_msg_s__rosidl_typesupport_fastrtps_c.cpython-310-aarch64-linux-gnu.so
+[9.700s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/rslidar_msg_s__rosidl_typesupport_introspection_c.cpython-310-aarch64-linux-gnu.so
+[9.728s] -- Up-to-date symlink: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/rslidar_msg_s__rosidl_typesupport_fastrtps_c.cpython-310-aarch64-linux-gnu.so
+[9.729s] -- Up-to-date symlink: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/rslidar_msg_s__rosidl_typesupport_introspection_c.cpython-310-aarch64-linux-gnu.so
+[9.730s] -- Up-to-date symlink: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/rslidar_msg_s__rosidl_typesupport_c.cpython-310-aarch64-linux-gnu.so
+[9.731s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/msg/RslidarPacket.idl
+[9.760s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/msg/RslidarPacket.msg
+[9.793s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/ament_index/resource_index/package_run_dependencies/rslidar_msg
+[9.819s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/ament_index/resource_index/parent_prefix_path/rslidar_msg
+[9.842s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/ament_prefix_path.sh
+[9.868s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/ament_prefix_path.dsv
+[9.893s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/path.sh
+[9.919s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/environment/path.dsv
+[9.940s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/local_setup.bash
+[9.967s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/local_setup.sh
+[9.986s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/local_setup.zsh
+[9.999s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/local_setup.dsv
+[10.030s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/package.dsv
+[10.057s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/ament_index/resource_index/packages/rslidar_msg
+[10.090s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rosidl_cmake-extras.cmake
+[10.122s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/ament_cmake_export_dependencies-extras.cmake
+[10.148s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/ament_cmake_export_include_directories-extras.cmake
+[10.167s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/ament_cmake_export_libraries-extras.cmake
+[10.183s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/ament_cmake_export_targets-extras.cmake
+[10.195s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[10.218s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[10.237s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msgConfig.cmake
+[10.250s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msgConfig-version.cmake
+[10.262s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/package.xml
+[10.290s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_generator_c.so
+[10.291s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_generator_c.so" to ""
+[10.292s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_fastrtps_c.so
+[10.293s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_fastrtps_c.so" to ""
+[10.294s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_fastrtps_cpp.so
+[10.295s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_fastrtps_cpp.so" to ""
+[10.296s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_introspection_c.so
+[10.297s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_introspection_c.so" to ""
+[10.297s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_c.so
+[10.299s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_c.so" to ""
+[10.299s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_introspection_cpp.so
+[10.303s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_introspection_cpp.so" to ""
+[10.304s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_cpp.so
+[10.307s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_typesupport_cpp.so" to ""
+[10.396s] Listing '/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg'...
+[10.397s] Compiling '/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/__init__.py'...
+[10.398s] Listing '/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/msg'...
+[10.399s] Compiling '/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/msg/__init__.py'...
+[10.399s] Compiling '/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/local/lib/python3.10/dist-packages/rslidar_msg/msg/_rslidar_packet.py'...
+[10.407s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_generator_py.so
+[10.409s] -- Set runtime path of "/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/lib/librslidar_msg__rosidl_generator_py.so" to ""
+[10.409s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_generator_cExport.cmake
+[10.410s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_generator_cExport-noconfig.cmake
+[10.411s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_typesupport_fastrtps_cExport.cmake
+[10.411s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[10.412s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_generator_cppExport.cmake
+[10.412s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_typesupport_fastrtps_cppExport.cmake
+[10.413s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[10.414s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_introspection_cExport.cmake
+[10.414s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[10.415s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_cExport.cmake
+[10.417s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_cExport-noconfig.cmake
+[10.417s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_introspection_cppExport.cmake
+[10.418s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[10.418s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_cppExport.cmake
+[10.420s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/rslidar_msg__rosidl_typesupport_cppExport-noconfig.cmake
+[10.420s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_generator_pyExport.cmake
+[10.421s] -- Installing: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake/export_rslidar_msg__rosidl_generator_pyExport-noconfig.cmake
+[10.434s] Invoked command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg

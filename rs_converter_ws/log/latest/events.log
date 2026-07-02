@@ -1,0 +1,417 @@
+[0.000000] (-) TimerEvent: {}
+[0.001116] (rs_converter) JobQueued: {'identifier': 'rs_converter', 'dependencies': OrderedDict()}
+[0.001247] (rs_converter) JobStarted: {'identifier': 'rs_converter'}
+[0.011683] (rs_converter) JobProgress: {'identifier': 'rs_converter', 'progress': 'cmake'}
+[0.012305] (rs_converter) Command: {'cmd': ['/usr/bin/cmake', '/root/work/wyx/lqp/Codes/rs_converter_ws/src/rs_to_velodyne_ros2', '-DCMAKE_BUILD_TYPE=Release', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter'], 'cwd': '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter', 'env': OrderedDict([('LC_TIME', 'C.UTF-8'), ('HOSTNAME', 'siasun'), ('GIT_ASKPASS', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass.sh'), ('SHLVL', '2'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib'), ('BROWSER', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/bin/helpers/browser.sh'), ('HOME', '/root'), ('OLDPWD', '/root/work/wyx/lqp/Codes'), ('TERM_PROGRAM_VERSION', '1.125.1'), ('VSCODE_IPC_HOOK_CLI', '/tmp/vscode-ipc-80497775-453d-4aec-b0bc-60cc25393967.sock'), ('ROS_PYTHON_VERSION', '3'), ('VSCODE_GIT_ASKPASS_MAIN', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass-main.js'), ('VSCODE_GIT_ASKPASS_NODE', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/node'), ('VSCODE_PYTHON_AUTOACTIVATE_GUARD', '1'), ('COLORTERM', 'truecolor'), ('REMOTE_CONTAINERS', 'true'), ('DEBUGINFOD_URLS', ''), ('COLCON_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install'), ('ROS_DISTRO', 'humble'), ('REMOTE_CONTAINERS_IPC', '/tmp/vscode-remote-containers-ipc-0ea254d0-49eb-41d3-b317-2959893a5298.sock'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm-256color'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/root/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand:/root/.vscode-server/data/User/globalStorage/github.copilot-chat/copilotCli:/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/bin/remote-cli:/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('FASTRTPS_DEFAULT_PROFILES_FILE', '/root/env/ros2/rk3588_eth_binding.xml'), ('REMOTE_CONTAINERS_SOCKETS', '["/tmp/vscode-ssh-auth-0ea254d0-49eb-41d3-b317-2959893a5298.sock","/tmp/.X11-unix/X1","/root/.gnupg/S.gpg-agent"]'), ('DISPLAY', ':1'), ('LANG', 'en_US.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('VSCODE_GIT_IPC_HANDLE', '/tmp/vscode-git-61342bd29b.sock'), ('TERM_PROGRAM', 'vscode'), ('SSH_AUTH_SOCK', '/tmp/vscode-ssh-auth-0ea254d0-49eb-41d3-b317-2959893a5298.sock'), ('ROS_DOMAIN_ID', '71'), ('AMENT_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter:/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('REMOTE_CONTAINERS_DISPLAY_SOCK', '/tmp/.X11-unix/X1'), ('SHELL', '/bin/bash'), ('VSCODE_GIT_ASKPASS_EXTRA_ARGS', ''), ('PWD', '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter'), ('LC_ALL', ''), ('COPILOT_DEBUG_NONCE', '593c2b88ab5899fa2e9bc2b41e62f78c'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('TZ', 'Asia/Shanghai'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter:/opt/ros/humble')]), 'shell': False}
+[0.099445] (-) TimerEvent: {}
+[0.157159] (rs_converter) StdoutLine: {'line': b'-- The C compiler identification is GNU 11.4.0\n'}
+[0.199677] (-) TimerEvent: {}
+[0.300742] (-) TimerEvent: {}
+[0.317693] (rs_converter) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 11.4.0\n'}
+[0.350671] (rs_converter) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.400658] (-) TimerEvent: {}
+[0.501315] (-) TimerEvent: {}
+[0.561588] (rs_converter) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.601479] (-) TimerEvent: {}
+[0.606101] (rs_converter) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.607129] (rs_converter) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.608839] (rs_converter) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.622817] (rs_converter) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.701686] (-) TimerEvent: {}
+[0.802419] (-) TimerEvent: {}
+[0.846277] (rs_converter) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.902430] (rs_converter) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.903119] (-) TimerEvent: {}
+[0.903826] (rs_converter) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.905214] (rs_converter) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.912717] (rs_converter) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[1.003339] (-) TimerEvent: {}
+[1.104085] (-) TimerEvent: {}
+[1.204778] (-) TimerEvent: {}
+[1.257956] (rs_converter) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[1.305006] (-) TimerEvent: {}
+[1.396011] (rs_converter) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[1.405244] (-) TimerEvent: {}
+[1.506259] (-) TimerEvent: {}
+[1.511067] (rs_converter) StdoutLine: {'line': b'-- Found rclcpp: 16.0.17 (/opt/ros/humble/share/rclcpp/cmake)\n'}
+[1.570525] (rs_converter) StdoutLine: {'line': b'-- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)\n'}
+[1.577024] (rs_converter) StdoutLine: {'line': b'-- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)\n'}
+[1.588551] (rs_converter) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)\n'}
+[1.604050] (rs_converter) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.606297] (-) TimerEvent: {}
+[1.625122] (rs_converter) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[1.682090] (rs_converter) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)\n'}
+[1.685348] (rs_converter) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 6.2.9 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)\n'}
+[1.706590] (-) TimerEvent: {}
+[1.807344] (-) TimerEvent: {}
+[1.859138] (rs_converter) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.2")  \n'}
+[1.907593] (-) TimerEvent: {}
+[1.928354] (rs_converter) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/humble/include  \n'}
+[2.005268] (rs_converter) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[2.007677] (-) TimerEvent: {}
+[2.017273] (rs_converter) StdoutLine: {'line': b'-- Looking for pthread.h\n'}
+[2.107874] (-) TimerEvent: {}
+[2.191826] (rs_converter) StdoutLine: {'line': b'-- Looking for pthread.h - found\n'}
+[2.192817] (rs_converter) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD\n'}
+[2.208029] (-) TimerEvent: {}
+[2.308950] (-) TimerEvent: {}
+[2.390561] (rs_converter) StdoutLine: {'line': b'-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success\n'}
+[2.392560] (rs_converter) StdoutLine: {'line': b'-- Found Threads: TRUE  \n'}
+[2.409183] (-) TimerEvent: {}
+[2.503051] (rs_converter) StdoutLine: {'line': b'-- Found sensor_msgs: 4.9.0 (/opt/ros/humble/share/sensor_msgs/cmake)\n'}
+[2.509257] (-) TimerEvent: {}
+[2.547813] (rs_converter) StdoutLine: {'line': b'-- Found pcl_conversions: 2.4.5 (/opt/ros/humble/share/pcl_conversions/cmake)\n'}
+[2.606971] (rs_converter) StdoutLine: {'line': b"-- Checking for module 'eigen3'\n"}
+[2.609371] (-) TimerEvent: {}
+[2.631978] (rs_converter) StdoutLine: {'line': b'--   Found eigen3, version 3.4.0\n'}
+[2.709628] (-) TimerEvent: {}
+[2.721454] (rs_converter) StdoutLine: {'line': b'-- Found Eigen: /usr/include/eigen3 (Required is at least version "3.1") \n'}
+[2.722353] (rs_converter) StdoutLine: {'line': b'-- Eigen found (include: /usr/include/eigen3, version: 3.4.0)\n'}
+[2.805079] (rs_converter) StdoutLine: {'line': b"-- Checking for module 'flann'\n"}
+[2.809719] (-) TimerEvent: {}
+[2.830222] (rs_converter) StdoutLine: {'line': b'--   Found flann, version 1.9.1\n'}
+[2.909915] (-) TimerEvent: {}
+[2.939447] (rs_converter) StdoutLine: {'line': b'-- Found FLANN: /usr/lib/aarch64-linux-gnu/libflann_cpp.so  \n'}
+[2.940065] (rs_converter) StdoutLine: {'line': b'-- FLANN found (include: /usr/include, lib: /usr/lib/aarch64-linux-gnu/libflann_cpp.so)\n'}
+[3.010060] (-) TimerEvent: {}
+[3.110722] (-) TimerEvent: {}
+[3.211347] (-) TimerEvent: {}
+[3.311987] (-) TimerEvent: {}
+[3.412976] (-) TimerEvent: {}
+[3.513776] (-) TimerEvent: {}
+[3.614525] (-) TimerEvent: {}
+[3.715045] (-) TimerEvent: {}
+[3.815803] (-) TimerEvent: {}
+[3.916523] (-) TimerEvent: {}
+[4.017252] (-) TimerEvent: {}
+[4.118021] (-) TimerEvent: {}
+[4.218683] (-) TimerEvent: {}
+[4.319112] (-) TimerEvent: {}
+[4.420031] (-) TimerEvent: {}
+[4.521251] (-) TimerEvent: {}
+[4.622241] (-) TimerEvent: {}
+[4.723045] (-) TimerEvent: {}
+[4.823711] (-) TimerEvent: {}
+[4.924728] (-) TimerEvent: {}
+[5.025730] (-) TimerEvent: {}
+[5.126691] (-) TimerEvent: {}
+[5.227902] (-) TimerEvent: {}
+[5.329196] (-) TimerEvent: {}
+[5.431320] (-) TimerEvent: {}
+[5.532030] (-) TimerEvent: {}
+[5.594183] (rs_converter) StdoutLine: {'line': b"-- Checking for module 'libusb-1.0'\n"}
+[5.628878] (rs_converter) StdoutLine: {'line': b'--   Found libusb-1.0, version 1.0.25\n'}
+[5.632161] (-) TimerEvent: {}
+[5.727940] (rs_converter) StdoutLine: {'line': b'-- Found libusb: /usr/lib/aarch64-linux-gnu/libusb-1.0.so  \n'}
+[5.732306] (-) TimerEvent: {}
+[5.734975] (rs_converter) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[5.832477] (-) TimerEvent: {}
+[5.888217] (rs_converter) StdoutLine: {'line': b'-- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/aarch64-linux-gnu/libOpenNI2.so;libusb::libusb)\n'}
+[5.932672] (-) TimerEvent: {}
+[6.033555] (-) TimerEvent: {}
+[6.134151] (-) TimerEvent: {}
+[6.156858] (rs_converter) StdoutLine: {'line': b'-- Eigen found (include: /usr/include/eigen3, version: 3.4.0)\n'}
+[6.166377] (rs_converter) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[6.181340] (rs_converter) StdoutLine: {'line': b'-- OpenNI2 found (version: 2.2.0.33, include: /usr/include/openni2, lib: /usr/lib/aarch64-linux-gnu/libOpenNI2.so;libusb::libusb)\n'}
+[6.234346] (-) TimerEvent: {}
+[6.335090] (-) TimerEvent: {}
+[6.378379] (rs_converter) StdoutLine: {'line': b'-- Found Qhull version 8.0.2\n'}
+[6.435243] (-) TimerEvent: {}
+[6.535979] (-) TimerEvent: {}
+[6.583612] (rs_converter) StdoutLine: {'line': b'-- OpenNI found (version: 1.5.4.0, include: /usr/include/ni, lib: /usr/lib/libOpenNI.so;libusb::libusb)\n'}
+[6.636132] (-) TimerEvent: {}
+[6.736819] (-) TimerEvent: {}
+[6.779490] (rs_converter) StdoutLine: {'line': b'-- Found PCL_COMMON: /usr/lib/aarch64-linux-gnu/libpcl_common.so  \n'}
+[6.780506] (rs_converter) StdoutLine: {'line': b'-- Found PCL_KDTREE: /usr/lib/aarch64-linux-gnu/libpcl_kdtree.so  \n'}
+[6.781391] (rs_converter) StdoutLine: {'line': b'-- Found PCL_OCTREE: /usr/lib/aarch64-linux-gnu/libpcl_octree.so  \n'}
+[6.782337] (rs_converter) StdoutLine: {'line': b'-- Found PCL_SEARCH: /usr/lib/aarch64-linux-gnu/libpcl_search.so  \n'}
+[6.783352] (rs_converter) StdoutLine: {'line': b'-- Found PCL_SAMPLE_CONSENSUS: /usr/lib/aarch64-linux-gnu/libpcl_sample_consensus.so  \n'}
+[6.784383] (rs_converter) StdoutLine: {'line': b'-- Found PCL_FILTERS: /usr/lib/aarch64-linux-gnu/libpcl_filters.so  \n'}
+[6.784868] (rs_converter) StdoutLine: {'line': b'-- Found PCL_2D: /usr/include/pcl-1.12  \n'}
+[6.785268] (rs_converter) StdoutLine: {'line': b'-- Found PCL_GEOMETRY: /usr/include/pcl-1.12  \n'}
+[6.786143] (rs_converter) StdoutLine: {'line': b'-- Found PCL_IO: /usr/lib/aarch64-linux-gnu/libpcl_io.so  \n'}
+[6.787242] (rs_converter) StdoutLine: {'line': b'-- Found PCL_FEATURES: /usr/lib/aarch64-linux-gnu/libpcl_features.so  \n'}
+[6.788374] (rs_converter) StdoutLine: {'line': b'-- Found PCL_ML: /usr/lib/aarch64-linux-gnu/libpcl_ml.so  \n'}
+[6.789291] (rs_converter) StdoutLine: {'line': b'-- Found PCL_SEGMENTATION: /usr/lib/aarch64-linux-gnu/libpcl_segmentation.so  \n'}
+[6.790637] (rs_converter) StdoutLine: {'line': b'-- Found PCL_VISUALIZATION: /usr/lib/aarch64-linux-gnu/libpcl_visualization.so  \n'}
+[6.791797] (rs_converter) StdoutLine: {'line': b'-- Found PCL_SURFACE: /usr/lib/aarch64-linux-gnu/libpcl_surface.so  \n'}
+[6.792701] (rs_converter) StdoutLine: {'line': b'-- Found PCL_REGISTRATION: /usr/lib/aarch64-linux-gnu/libpcl_registration.so  \n'}
+[6.793984] (rs_converter) StdoutLine: {'line': b'-- Found PCL_KEYPOINTS: /usr/lib/aarch64-linux-gnu/libpcl_keypoints.so  \n'}
+[6.795059] (rs_converter) StdoutLine: {'line': b'-- Found PCL_TRACKING: /usr/lib/aarch64-linux-gnu/libpcl_tracking.so  \n'}
+[6.796082] (rs_converter) StdoutLine: {'line': b'-- Found PCL_RECOGNITION: /usr/lib/aarch64-linux-gnu/libpcl_recognition.so  \n'}
+[6.797230] (rs_converter) StdoutLine: {'line': b'-- Found PCL_STEREO: /usr/lib/aarch64-linux-gnu/libpcl_stereo.so  \n'}
+[6.798184] (rs_converter) StdoutLine: {'line': b'-- Found PCL_APPS: /usr/lib/aarch64-linux-gnu/libpcl_apps.so  \n'}
+[6.799228] (rs_converter) StdoutLine: {'line': b'-- Found PCL_IN_HAND_SCANNER: /usr/include/pcl-1.12  \n'}
+[6.799696] (rs_converter) StdoutLine: {'line': b'-- Found PCL_MODELER: /usr/include/pcl-1.12  \n'}
+[6.800237] (rs_converter) StdoutLine: {'line': b'-- Found PCL_POINT_CLOUD_EDITOR: /usr/include/pcl-1.12  \n'}
+[6.801232] (rs_converter) StdoutLine: {'line': b'-- Found PCL_OUTOFCORE: /usr/lib/aarch64-linux-gnu/libpcl_outofcore.so  \n'}
+[6.802309] (rs_converter) StdoutLine: {'line': b'-- Found PCL_PEOPLE: /usr/lib/aarch64-linux-gnu/libpcl_people.so  \n'}
+[6.815531] (rs_converter) StderrLine: {'line': b'\x1b[33mCMake Warning (dev) at CMakeLists.txt:13 (find_package):\n'}
+[6.815800] (rs_converter) StderrLine: {'line': b'  Policy CMP0074 is not set: find_package uses <PackageName>_ROOT variables.\n'}
+[6.815880] (rs_converter) StderrLine: {'line': b'  Run "cmake --help-policy CMP0074" for policy details.  Use the cmake_policy\n'}
+[6.815946] (rs_converter) StderrLine: {'line': b'  command to set the policy and suppress this warning.\n'}
+[6.816009] (rs_converter) StderrLine: {'line': b'\n'}
+[6.816078] (rs_converter) StderrLine: {'line': b'  CMake variable PCL_ROOT is set to:\n'}
+[6.816139] (rs_converter) StderrLine: {'line': b'\n'}
+[6.816209] (rs_converter) StderrLine: {'line': b'    /usr\n'}
+[6.816274] (rs_converter) StderrLine: {'line': b'\n'}
+[6.816333] (rs_converter) StderrLine: {'line': b'  For compatibility, CMake is ignoring the variable.\n'}
+[6.816391] (rs_converter) StderrLine: {'line': b'This warning is for project developers.  Use -Wno-dev to suppress it.\n'}
+[6.816450] (rs_converter) StderrLine: {'line': b'\x1b[0m\n'}
+[6.836898] (-) TimerEvent: {}
+[6.937376] (-) TimerEvent: {}
+[6.973037] (rs_converter) StdoutLine: {'line': b'-- Configuring done\n'}
+[7.013906] (rs_converter) StdoutLine: {'line': b'-- Generating done\n'}
+[7.027468] (rs_converter) StdoutLine: {'line': b'-- Build files have been written to: /root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter\n'}
+[7.037559] (-) TimerEvent: {}
+[7.053434] (rs_converter) CommandEnded: {'returncode': 0}
+[7.057594] (rs_converter) JobProgress: {'identifier': 'rs_converter', 'progress': 'build'}
+[7.057840] (rs_converter) Command: {'cmd': ['/usr/bin/cmake', '--build', '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter', '--', '-j8', '-l8'], 'cwd': '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter', 'env': OrderedDict([('LC_TIME', 'C.UTF-8'), ('HOSTNAME', 'siasun'), ('GIT_ASKPASS', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass.sh'), ('SHLVL', '2'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib'), ('BROWSER', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/bin/helpers/browser.sh'), ('HOME', '/root'), ('OLDPWD', '/root/work/wyx/lqp/Codes'), ('TERM_PROGRAM_VERSION', '1.125.1'), ('VSCODE_IPC_HOOK_CLI', '/tmp/vscode-ipc-80497775-453d-4aec-b0bc-60cc25393967.sock'), ('ROS_PYTHON_VERSION', '3'), ('VSCODE_GIT_ASKPASS_MAIN', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass-main.js'), ('VSCODE_GIT_ASKPASS_NODE', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/node'), ('VSCODE_PYTHON_AUTOACTIVATE_GUARD', '1'), ('COLORTERM', 'truecolor'), ('REMOTE_CONTAINERS', 'true'), ('DEBUGINFOD_URLS', ''), ('COLCON_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install'), ('ROS_DISTRO', 'humble'), ('REMOTE_CONTAINERS_IPC', '/tmp/vscode-remote-containers-ipc-0ea254d0-49eb-41d3-b317-2959893a5298.sock'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm-256color'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/root/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand:/root/.vscode-server/data/User/globalStorage/github.copilot-chat/copilotCli:/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/bin/remote-cli:/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('FASTRTPS_DEFAULT_PROFILES_FILE', '/root/env/ros2/rk3588_eth_binding.xml'), ('REMOTE_CONTAINERS_SOCKETS', '["/tmp/vscode-ssh-auth-0ea254d0-49eb-41d3-b317-2959893a5298.sock","/tmp/.X11-unix/X1","/root/.gnupg/S.gpg-agent"]'), ('DISPLAY', ':1'), ('LANG', 'en_US.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('VSCODE_GIT_IPC_HANDLE', '/tmp/vscode-git-61342bd29b.sock'), ('TERM_PROGRAM', 'vscode'), ('SSH_AUTH_SOCK', '/tmp/vscode-ssh-auth-0ea254d0-49eb-41d3-b317-2959893a5298.sock'), ('ROS_DOMAIN_ID', '71'), ('AMENT_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter:/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('REMOTE_CONTAINERS_DISPLAY_SOCK', '/tmp/.X11-unix/X1'), ('SHELL', '/bin/bash'), ('VSCODE_GIT_ASKPASS_EXTRA_ARGS', ''), ('PWD', '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter'), ('LC_ALL', ''), ('COPILOT_DEBUG_NONCE', '593c2b88ab5899fa2e9bc2b41e62f78c'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('TZ', 'Asia/Shanghai'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter:/opt/ros/humble')]), 'shell': False}
+[7.137752] (-) TimerEvent: {}
+[7.188476] (rs_converter) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/rs_converter.dir/src/rs_converter.cpp.o\x1b[0m\n'}
+[7.237983] (-) TimerEvent: {}
+[7.338855] (-) TimerEvent: {}
+[7.439517] (-) TimerEvent: {}
+[7.539919] (-) TimerEvent: {}
+[7.640585] (-) TimerEvent: {}
+[7.741291] (-) TimerEvent: {}
+[7.842046] (-) TimerEvent: {}
+[7.942708] (-) TimerEvent: {}
+[8.043358] (-) TimerEvent: {}
+[8.144023] (-) TimerEvent: {}
+[8.244804] (-) TimerEvent: {}
+[8.345525] (-) TimerEvent: {}
+[8.446611] (-) TimerEvent: {}
+[8.547258] (-) TimerEvent: {}
+[8.648013] (-) TimerEvent: {}
+[8.748663] (-) TimerEvent: {}
+[8.849363] (-) TimerEvent: {}
+[8.950128] (-) TimerEvent: {}
+[9.050870] (-) TimerEvent: {}
+[9.151691] (-) TimerEvent: {}
+[9.252445] (-) TimerEvent: {}
+[9.353232] (-) TimerEvent: {}
+[9.454016] (-) TimerEvent: {}
+[9.554814] (-) TimerEvent: {}
+[9.655589] (-) TimerEvent: {}
+[9.756429] (-) TimerEvent: {}
+[9.857327] (-) TimerEvent: {}
+[9.958121] (-) TimerEvent: {}
+[10.058855] (-) TimerEvent: {}
+[10.159645] (-) TimerEvent: {}
+[10.260404] (-) TimerEvent: {}
+[10.361199] (-) TimerEvent: {}
+[10.461959] (-) TimerEvent: {}
+[10.562728] (-) TimerEvent: {}
+[10.663523] (-) TimerEvent: {}
+[10.764259] (-) TimerEvent: {}
+[10.865033] (-) TimerEvent: {}
+[10.965942] (-) TimerEvent: {}
+[11.066834] (-) TimerEvent: {}
+[11.167635] (-) TimerEvent: {}
+[11.268378] (-) TimerEvent: {}
+[11.369153] (-) TimerEvent: {}
+[11.469862] (-) TimerEvent: {}
+[11.570558] (-) TimerEvent: {}
+[11.671260] (-) TimerEvent: {}
+[11.771932] (-) TimerEvent: {}
+[11.872379] (-) TimerEvent: {}
+[11.973116] (-) TimerEvent: {}
+[12.073782] (-) TimerEvent: {}
+[12.174498] (-) TimerEvent: {}
+[12.275227] (-) TimerEvent: {}
+[12.375945] (-) TimerEvent: {}
+[12.476686] (-) TimerEvent: {}
+[12.577427] (-) TimerEvent: {}
+[12.678149] (-) TimerEvent: {}
+[12.778975] (-) TimerEvent: {}
+[12.879697] (-) TimerEvent: {}
+[12.980431] (-) TimerEvent: {}
+[13.081079] (-) TimerEvent: {}
+[13.181410] (-) TimerEvent: {}
+[13.281835] (-) TimerEvent: {}
+[13.382555] (-) TimerEvent: {}
+[13.483318] (-) TimerEvent: {}
+[13.583977] (-) TimerEvent: {}
+[13.684325] (-) TimerEvent: {}
+[13.784650] (-) TimerEvent: {}
+[13.884983] (-) TimerEvent: {}
+[13.985391] (-) TimerEvent: {}
+[14.086072] (-) TimerEvent: {}
+[14.186987] (-) TimerEvent: {}
+[14.287693] (-) TimerEvent: {}
+[14.388384] (-) TimerEvent: {}
+[14.489307] (-) TimerEvent: {}
+[14.590060] (-) TimerEvent: {}
+[14.690744] (-) TimerEvent: {}
+[14.791428] (-) TimerEvent: {}
+[14.892117] (-) TimerEvent: {}
+[14.992834] (-) TimerEvent: {}
+[15.093590] (-) TimerEvent: {}
+[15.194265] (-) TimerEvent: {}
+[15.294959] (-) TimerEvent: {}
+[15.395641] (-) TimerEvent: {}
+[15.496354] (-) TimerEvent: {}
+[15.597117] (-) TimerEvent: {}
+[15.701553] (-) TimerEvent: {}
+[15.802286] (-) TimerEvent: {}
+[15.902986] (-) TimerEvent: {}
+[16.003700] (-) TimerEvent: {}
+[16.104381] (-) TimerEvent: {}
+[16.205089] (-) TimerEvent: {}
+[16.305787] (-) TimerEvent: {}
+[16.406499] (-) TimerEvent: {}
+[16.507179] (-) TimerEvent: {}
+[16.607880] (-) TimerEvent: {}
+[16.708583] (-) TimerEvent: {}
+[16.809337] (-) TimerEvent: {}
+[16.910062] (-) TimerEvent: {}
+[17.010688] (-) TimerEvent: {}
+[17.111103] (-) TimerEvent: {}
+[17.211837] (-) TimerEvent: {}
+[17.312670] (-) TimerEvent: {}
+[17.413454] (-) TimerEvent: {}
+[17.514212] (-) TimerEvent: {}
+[17.615028] (-) TimerEvent: {}
+[17.715819] (-) TimerEvent: {}
+[17.816617] (-) TimerEvent: {}
+[17.917348] (-) TimerEvent: {}
+[18.018090] (-) TimerEvent: {}
+[18.118874] (-) TimerEvent: {}
+[18.219598] (-) TimerEvent: {}
+[18.320421] (-) TimerEvent: {}
+[18.421292] (-) TimerEvent: {}
+[18.522016] (-) TimerEvent: {}
+[18.622737] (-) TimerEvent: {}
+[18.723496] (-) TimerEvent: {}
+[18.824152] (-) TimerEvent: {}
+[18.924577] (-) TimerEvent: {}
+[19.025404] (-) TimerEvent: {}
+[19.126250] (-) TimerEvent: {}
+[19.226988] (-) TimerEvent: {}
+[19.327720] (-) TimerEvent: {}
+[19.428494] (-) TimerEvent: {}
+[19.529307] (-) TimerEvent: {}
+[19.630135] (-) TimerEvent: {}
+[19.730925] (-) TimerEvent: {}
+[19.831641] (-) TimerEvent: {}
+[19.932527] (-) TimerEvent: {}
+[20.033206] (-) TimerEvent: {}
+[20.133546] (-) TimerEvent: {}
+[20.233951] (-) TimerEvent: {}
+[20.334635] (-) TimerEvent: {}
+[20.435434] (-) TimerEvent: {}
+[20.536158] (-) TimerEvent: {}
+[20.636992] (-) TimerEvent: {}
+[20.737803] (-) TimerEvent: {}
+[20.838605] (-) TimerEvent: {}
+[20.939391] (-) TimerEvent: {}
+[21.040154] (-) TimerEvent: {}
+[21.140876] (-) TimerEvent: {}
+[21.241603] (-) TimerEvent: {}
+[21.342309] (-) TimerEvent: {}
+[21.443053] (-) TimerEvent: {}
+[21.543781] (-) TimerEvent: {}
+[21.644627] (-) TimerEvent: {}
+[21.745337] (-) TimerEvent: {}
+[21.846063] (-) TimerEvent: {}
+[21.946733] (-) TimerEvent: {}
+[22.047058] (-) TimerEvent: {}
+[22.147472] (-) TimerEvent: {}
+[22.248199] (-) TimerEvent: {}
+[22.349031] (-) TimerEvent: {}
+[22.449714] (-) TimerEvent: {}
+[22.550052] (-) TimerEvent: {}
+[22.650345] (-) TimerEvent: {}
+[22.750670] (-) TimerEvent: {}
+[22.850995] (-) TimerEvent: {}
+[22.951323] (-) TimerEvent: {}
+[23.051645] (-) TimerEvent: {}
+[23.151979] (-) TimerEvent: {}
+[23.252318] (-) TimerEvent: {}
+[23.352653] (-) TimerEvent: {}
+[23.453018] (-) TimerEvent: {}
+[23.553536] (-) TimerEvent: {}
+[23.654235] (-) TimerEvent: {}
+[23.755060] (-) TimerEvent: {}
+[23.855862] (-) TimerEvent: {}
+[23.956794] (-) TimerEvent: {}
+[24.057472] (-) TimerEvent: {}
+[24.158156] (-) TimerEvent: {}
+[24.258984] (-) TimerEvent: {}
+[24.359682] (-) TimerEvent: {}
+[24.460381] (-) TimerEvent: {}
+[24.561069] (-) TimerEvent: {}
+[24.661812] (-) TimerEvent: {}
+[24.762562] (-) TimerEvent: {}
+[24.863354] (-) TimerEvent: {}
+[24.964012] (-) TimerEvent: {}
+[25.064686] (-) TimerEvent: {}
+[25.165496] (-) TimerEvent: {}
+[25.266276] (-) TimerEvent: {}
+[25.367010] (-) TimerEvent: {}
+[25.467738] (-) TimerEvent: {}
+[25.568440] (-) TimerEvent: {}
+[25.669166] (-) TimerEvent: {}
+[25.769933] (-) TimerEvent: {}
+[25.870608] (-) TimerEvent: {}
+[25.970947] (-) TimerEvent: {}
+[26.071276] (-) TimerEvent: {}
+[26.171605] (-) TimerEvent: {}
+[26.271933] (-) TimerEvent: {}
+[26.372272] (-) TimerEvent: {}
+[26.472616] (-) TimerEvent: {}
+[26.572966] (-) TimerEvent: {}
+[26.673302] (-) TimerEvent: {}
+[26.773640] (-) TimerEvent: {}
+[26.873974] (-) TimerEvent: {}
+[26.974291] (-) TimerEvent: {}
+[27.074614] (-) TimerEvent: {}
+[27.174936] (-) TimerEvent: {}
+[27.275262] (-) TimerEvent: {}
+[27.375587] (-) TimerEvent: {}
+[27.475911] (-) TimerEvent: {}
+[27.576249] (-) TimerEvent: {}
+[27.676660] (-) TimerEvent: {}
+[27.777479] (-) TimerEvent: {}
+[27.878241] (-) TimerEvent: {}
+[27.978883] (-) TimerEvent: {}
+[28.079560] (-) TimerEvent: {}
+[28.080501] (rs_converter) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable rs_converter\x1b[0m\n'}
+[28.179728] (-) TimerEvent: {}
+[28.280450] (-) TimerEvent: {}
+[28.381156] (-) TimerEvent: {}
+[28.481913] (-) TimerEvent: {}
+[28.582615] (-) TimerEvent: {}
+[28.675189] (rs_converter) StdoutLine: {'line': b'[100%] Built target rs_converter\n'}
+[28.682743] (-) TimerEvent: {}
+[28.711395] (rs_converter) CommandEnded: {'returncode': 0}
+[28.714481] (rs_converter) JobProgress: {'identifier': 'rs_converter', 'progress': 'install'}
+[28.748779] (rs_converter) Command: {'cmd': ['/usr/bin/cmake', '--install', '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter'], 'cwd': '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter', 'env': OrderedDict([('LC_TIME', 'C.UTF-8'), ('HOSTNAME', 'siasun'), ('GIT_ASKPASS', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass.sh'), ('SHLVL', '2'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib'), ('BROWSER', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/bin/helpers/browser.sh'), ('HOME', '/root'), ('OLDPWD', '/root/work/wyx/lqp/Codes'), ('TERM_PROGRAM_VERSION', '1.125.1'), ('VSCODE_IPC_HOOK_CLI', '/tmp/vscode-ipc-80497775-453d-4aec-b0bc-60cc25393967.sock'), ('ROS_PYTHON_VERSION', '3'), ('VSCODE_GIT_ASKPASS_MAIN', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/extensions/git/dist/askpass-main.js'), ('VSCODE_GIT_ASKPASS_NODE', '/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/node'), ('VSCODE_PYTHON_AUTOACTIVATE_GUARD', '1'), ('COLORTERM', 'truecolor'), ('REMOTE_CONTAINERS', 'true'), ('DEBUGINFOD_URLS', ''), ('COLCON_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install'), ('ROS_DISTRO', 'humble'), ('REMOTE_CONTAINERS_IPC', '/tmp/vscode-remote-containers-ipc-0ea254d0-49eb-41d3-b317-2959893a5298.sock'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('TERM', 'xterm-256color'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/root/.vscode-server/data/User/globalStorage/github.copilot-chat/debugCommand:/root/.vscode-server/data/User/globalStorage/github.copilot-chat/copilotCli:/root/.vscode-server/bin/fcf604774b9f2674b473065736ee75077e256353/bin/remote-cli:/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('FASTRTPS_DEFAULT_PROFILES_FILE', '/root/env/ros2/rk3588_eth_binding.xml'), ('REMOTE_CONTAINERS_SOCKETS', '["/tmp/vscode-ssh-auth-0ea254d0-49eb-41d3-b317-2959893a5298.sock","/tmp/.X11-unix/X1","/root/.gnupg/S.gpg-agent"]'), ('DISPLAY', ':1'), ('LANG', 'en_US.UTF-8'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('VSCODE_GIT_IPC_HANDLE', '/tmp/vscode-git-61342bd29b.sock'), ('TERM_PROGRAM', 'vscode'), ('SSH_AUTH_SOCK', '/tmp/vscode-ssh-auth-0ea254d0-49eb-41d3-b317-2959893a5298.sock'), ('ROS_DOMAIN_ID', '71'), ('AMENT_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter:/opt/ros/humble'), ('DEBIAN_FRONTEND', 'noninteractive'), ('REMOTE_CONTAINERS_DISPLAY_SOCK', '/tmp/.X11-unix/X1'), ('SHELL', '/bin/bash'), ('VSCODE_GIT_ASKPASS_EXTRA_ARGS', ''), ('PWD', '/root/work/wyx/lqp/Codes/rs_converter_ws/build/rs_converter'), ('LC_ALL', ''), ('COPILOT_DEBUG_NONCE', '593c2b88ab5899fa2e9bc2b41e62f78c'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('TZ', 'Asia/Shanghai'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter:/opt/ros/humble')]), 'shell': False}
+[28.777222] (rs_converter) StdoutLine: {'line': b'-- Install configuration: "Release"\n'}
+[28.778974] (rs_converter) StdoutLine: {'line': b'-- Execute custom install script\n'}
+[28.781148] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/lib/rs_converter/rs_converter\n'}
+[28.782860] (-) TimerEvent: {}
+[28.806062] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/launch/rs_converter.launch.py\n'}
+[28.822373] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/ament_index/resource_index/package_run_dependencies/rs_converter\n'}
+[28.834543] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/ament_index/resource_index/parent_prefix_path/rs_converter\n'}
+[28.847097] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/environment/ament_prefix_path.sh\n'}
+[28.858852] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/environment/ament_prefix_path.dsv\n'}
+[28.868834] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/environment/path.sh\n'}
+[28.883111] (-) TimerEvent: {}
+[28.893742] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/environment/path.dsv\n'}
+[28.917778] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/local_setup.bash\n'}
+[28.956395] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/local_setup.sh\n'}
+[28.973530] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/local_setup.zsh\n'}
+[28.983296] (-) TimerEvent: {}
+[28.984883] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/local_setup.dsv\n'}
+[28.997315] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/package.dsv\n'}
+[29.023630] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/ament_index/resource_index/packages/rs_converter\n'}
+[29.041503] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/cmake/rs_converterConfig.cmake\n'}
+[29.066188] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/cmake/rs_converterConfig-version.cmake\n'}
+[29.083464] (-) TimerEvent: {}
+[29.092229] (rs_converter) StdoutLine: {'line': b'-- Symlinking: /root/work/wyx/lqp/Codes/rs_converter_ws/install/rs_converter/share/rs_converter/package.xml\n'}
+[29.129483] (rs_converter) CommandEnded: {'returncode': 0}
+[29.183711] (-) TimerEvent: {}
+[29.217355] (rs_converter) JobEnded: {'identifier': 'rs_converter', 'rc': 0}
+[29.220339] (-) EventReactorShutdown: {}

@@ -1,0 +1,83 @@
+[0.022s] Invoking command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk': CMAKE_PREFIX_PATH=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg:/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk:/opt/ros/humble /usr/bin/cmake /root/work/wyx/lqp/Codes/robosense_ws/src/rslidar_sdk -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk
+[0.197s] -- The C compiler identification is GNU 11.4.0
+[0.360s] -- The CXX compiler identification is GNU 11.4.0
+[0.390s] -- Detecting C compiler ABI info
+[0.608s] -- Detecting C compiler ABI info - done
+[0.666s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.667s] -- Detecting C compile features
+[0.668s] -- Detecting C compile features - done
+[0.676s] -- Detecting CXX compiler ABI info
+[0.867s] -- Detecting CXX compiler ABI info - done
+[0.892s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.892s] -- Detecting CXX compile features
+[0.894s] -- Detecting CXX compile features - done
+[0.895s] [0m=============================================================[0m
+[0.896s] [0m-- POINT_TYPE is XYZIRT[0m
+[0.896s] [0m=============================================================[0m
+[0.924s] [0m=============================================================[0m
+[0.924s] [0m-- ROS Not Found. ROS Support is turned Off.[0m
+[0.925s] [0m=============================================================[0m
+[1.309s] -- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter 
+[1.448s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.632s] -- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+[1.638s] -- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+[1.650s] -- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+[1.666s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.686s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.744s] -- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+[1.747s] -- Found rmw_fastrtps_cpp: 6.2.9 (/opt/ros/humble/share/rmw_fastrtps_cpp/cmake)
+[2.220s] -- Found OpenSSL: /usr/lib/aarch64-linux-gnu/libcrypto.so (found version "3.0.2")  
+[2.223s] -- Found FastRTPS: /opt/ros/humble/include  
+[2.224s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[2.225s] -- Looking for pthread.h
+[2.446s] -- Looking for pthread.h - found
+[2.447s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[2.606s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[2.611s] -- Found Threads: TRUE  
+[2.747s] [0m=============================================================[0m
+[2.747s] [0m-- ROS2 Found. ROS2 Support is turned On.[0m
+[2.748s] [0m=============================================================[0m
+[2.749s] -- Found sensor_msgs: 4.9.0 (/opt/ros/humble/share/sensor_msgs/cmake)
+[2.793s] -- Found rslidar_msg: 0.0.0 (/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg/share/rslidar_msg/cmake)
+[2.828s] [0m=============================================================[0m
+[2.828s] [0m-- CMake run for UNIX GNU Compiler[0m
+[2.829s] [0m=============================================================[0m
+[2.830s] [0m=============================================================[0m
+[2.830s] [0m-- rs_driver Version : v1.5.19[0m
+[2.831s] [0m=============================================================[0m
+[2.959s] -- Configuring done
+[2.977s] -- Generating done
+[2.986s] -- Build files have been written to: /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk
+[3.007s] Invoked command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk' returned '0': CMAKE_PREFIX_PATH=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg:/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk:/opt/ros/humble /usr/bin/cmake /root/work/wyx/lqp/Codes/robosense_ws/src/rslidar_sdk -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk
+[3.013s] Invoking command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk': CMAKE_PREFIX_PATH=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg:/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk:/opt/ros/humble /usr/bin/cmake --build /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk -- -j8 -l8
+[3.157s] [ 33%] [32mBuilding CXX object CMakeFiles/rslidar_sdk_node.dir/node/rslidar_sdk_node.cpp.o[0m
+[3.169s] [ 66%] [32mBuilding CXX object CMakeFiles/rslidar_sdk_node.dir/src/manager/node_manager.cpp.o[0m
+[33.597s] [100%] [32m[1mLinking CXX executable rslidar_sdk_node[0m
+[33.997s] [100%] Built target rslidar_sdk_node
+[34.025s] Invoked command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk' returned '0': CMAKE_PREFIX_PATH=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg:/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk:/opt/ros/humble /usr/bin/cmake --build /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk -- -j8 -l8
+[34.030s] Invoking command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk': CMAKE_PREFIX_PATH=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg:/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk:/opt/ros/humble /usr/bin/cmake --install /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk
+[34.055s] -- Install configuration: "Release"
+[34.056s] -- Execute custom install script
+[34.057s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/lib/rslidar_sdk/rslidar_sdk_node
+[34.085s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/launch/elequent_start.py
+[34.102s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/launch/humble_start.py
+[34.115s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/launch/start.launch
+[34.128s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/launch/start.py
+[34.158s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/rviz/rviz.rviz
+[34.182s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/rviz/rviz2.rviz
+[34.212s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/ament_index/resource_index/package_run_dependencies/rslidar_sdk
+[34.244s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/ament_index/resource_index/parent_prefix_path/rslidar_sdk
+[34.276s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/environment/ament_prefix_path.sh
+[34.306s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/environment/ament_prefix_path.dsv
+[34.323s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/environment/path.sh
+[34.356s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/environment/path.dsv
+[34.375s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/local_setup.bash
+[34.389s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/local_setup.sh
+[34.411s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/local_setup.zsh
+[34.442s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/local_setup.dsv
+[34.461s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/package.dsv
+[34.493s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/ament_index/resource_index/packages/rslidar_sdk
+[34.526s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/cmake/rslidar_sdkConfig.cmake
+[34.544s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/cmake/rslidar_sdkConfig-version.cmake
+[34.572s] -- Symlinking: /root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk/share/rslidar_sdk/package.xml
+[34.594s] Invoked command in '/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk' returned '0': CMAKE_PREFIX_PATH=/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_msg:/root/work/wyx/lqp/Codes/robosense_ws/install/rslidar_sdk:/opt/ros/humble /usr/bin/cmake --install /root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_sdk

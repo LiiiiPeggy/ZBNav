@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "rslidar_msg__py",
+		"source" : "/root/work/wyx/lqp/Codes/robosense_ws/build/rslidar_msg/rslidar_msg__py"
+	}
+}
