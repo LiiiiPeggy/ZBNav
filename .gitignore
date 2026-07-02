@@ -1,0 +1,22 @@
+# === Core dumps ===
+core
+core.*
+
+# === Build & Install (ROS/CMake) ===
+build/
+build*/
+cmake-build-*/
+install/
+devel/
+
+# === Build logs ===
+log/
+
+# === IDE & Editor ===
+.vscode/
+.idea/
+*.swp
+*~
+
+# === Compiled objects ===
+*.o
