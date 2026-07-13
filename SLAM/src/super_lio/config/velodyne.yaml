@@ -1,0 +1,78 @@
+/**:
+  ros__parameters:
+    # ======================== 地图保存 ========================
+    lio.map.save_map: false           # 是否保存点云地图
+    lio.map.if_filter: false          # 保存时是否对地图滤波降采样
+    lio.map.save_map_dir: "map"       # 地图保存目录（相对于 Super-LIO 根目录）
+    lio.map.map_name: "map.pcd"       # 地图文件名
+    lio.map.ds_size: 0.3              # 地图降采样栅格尺寸（米），仅在 if_filter=true 时生效
+    lio.map.save_interval: 500        # 每隔 N 帧保存一次地图子文件（-1 表示所有帧存入单个文件）
+
+    # ======================== ROS 话题 ========================
+    lio.ros.lidar_topic: "/velodyne_points"   # LiDAR 点云话题
+    lio.ros.imu_topic: "/Devices/Imu/Data"     # IMU 数据话题
+
+    # ======================== 传感器参数 ========================
+    lio.sensor.lidar_type: 4          # LiDAR 型号: 1=Mid360, 2=Hesai16, 3=Velo16, 4=Velo32, 5=VeloNCLT, 6=LS16
+    lio.sensor.blind: 0.2             # LiDAR 盲区距离（米），小于此距离的点被剔除
+    lio.sensor.maxrange: 100.0        # LiDAR 最大有效距离（米），超出此距离的点被剔除
+    lio.sensor.filter_rate: 3         # 降采样间隔：每隔 N 个点取 1 个（5 表示保留 1/5 的点）
+    lio.sensor.enable_downsample: true # 是否启用体素降采样
+    lio.sensor.voxel_fliter_size: 0.25 # 体素降采样栅格尺寸（米）
+
+    # 根据标定结果中的重力向量模长计算：
+    # sqrt((-0.120675)^2 + 0.232565^2 + (-9.809897)^2)
+    lio.sensor.gravity_norm: 9.8134   # 当地重力加速度模长（m/s²），用于 ESKF 重力对齐初始化
+
+    lio.sensor.imu_type: 0            # IMU 型号: 0=内置IMU(livox内置), 1=外置IMU
+
+    # 以下为 IMU 噪声参数（连续时间模型），不是标定输出的零偏，暂时保持原值
+    lio.sensor.imu_na: 0.1            # IMU 加速度计白噪声标准差 (m/s²/√Hz)
+    lio.sensor.imu_ng: 0.1            # IMU 陀螺仪白噪声标准差 (rad/s/√Hz)
+    lio.sensor.imu_nba: 0.0001        # IMU 加速度计零偏随机游走标准差 (m/s³/√Hz)
+    lio.sensor.imu_nbg: 0.0001        # IMU 陀螺仪零偏随机游走标准差 (rad/s²/√Hz)
+
+    # ======================== LiDAR-IMU 外参 ========================
+    # Refinement result:
+    # Translation LiDAR to IMU:
+    # [-0.035771, -0.132527, 0.137891]
+    #
+    # Rotation LiDAR to IMU:
+    # [ 0.291867, -0.956057, -0.027714
+    #   0.955871,  0.292581, -0.026578
+    #   0.033518, -0.018733,  0.999263 ]
+    #
+    # 格式：
+    # [tx, ty, tz,
+    #  r00, r01, r02,
+    #  r10, r11, r12,
+    #  r20, r21, r22]
+    lio.extrinsic.lidar_imu: [-0.035771, -0.132527, 0.137891,   # LiDAR 在 IMU 坐标系下的位姿变换:
+                               0.291867, -0.956057, -0.027714,  #   前 3 个 = 平移 (m)
+                               0.955871,  0.292581, -0.026578,  #   后 9 个 = 旋转矩阵 (3×3, row-major)
+                               0.033518, -0.018733,  0.999263]
+
+    lio.extrinsic.odom_robo: [0.0, 0.0, 0.0,     # LiDAR 在机器人基座坐标系下的位姿:
+                               0.0, 0.0, 0.0]     #   仅记录 yaw 角旋转（M3 g_lidar_robo_yaw）
+
+    # ======================== 哈希地图（ikd-Tree） ========================
+    lio.hash_map.hash_capacity: 100000000  # 哈希表最大容量（bucket 数）
+    lio.hash_map.vox_resolution: 0.5       # 体素栅格分辨率（米），决定地图稠密度
+
+    # ======================== 卡尔曼滤波器 ========================
+    lio.kf.kf_type: 0               # 滤波器类型: 0=IESKF (迭代误差状态KF), 1=ESKF, 2=InESKF
+    lio.kf.kf_max_iterations: 4     # ESKF 最大迭代次数
+    lio.kf.kf_align_gravity: true   # 是否使用重力方向对齐初始化 ESKF 姿态
+    lio.kf.kf_quit_eps: 0.001       # ESKF 迭代收敛阈值（增量范数小于此值时提前退出）
+
+    # ======================== 输出话题 ========================
+    lio.output.robot: false          # 是否发布机器人位姿（/lio/robot_odom）
+    lio.output.plan_env_world: false # 是否发布世界系下的规划环境点云
+    lio.output.plan_env_body: false  # 是否发布机体系下的规划环境点云
+    lio.output.planner: false        # 是否启用下游规划器接口
+    lio.output.map: true             # 是否发布全局地图点云（/cloud_map）
+    lio.output.dense: true           # 是否发布稠密点云（即 scan 累积后的局部地图）
+    lio.output.pub_step: 5           # 每隔 N 帧发布一次输出话题（降低发布频率）
+
+    # ======================== 计时评估 ========================
+    lio.eva.timer: true              # 是否打印各模块耗时（调试用，生产环境建议关闭）
