@@ -1,0 +1,12 @@
+fast_lio_bridge:
+  ros__parameters:
+    odom_input_topic: "/Odometry"
+    cloud_input_topic: "/cloud_registered"
+
+    state_output_topic: "/state_estimation"
+    cloud_output_topic: "/registered_scan"
+
+    global_frame: "camera_init"
+    child_frame: "body"
+
+    publish_tf: false
