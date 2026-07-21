@@ -25,7 +25,11 @@ def generate_launch_description():
         name='relocation_node',
         output='screen',
         parameters=[config_yaml],
-        arguments=['--ros-args', '--log-level', 'info']
+        arguments=['--ros-args', '--log-level', 'info'],
+        remappings=[
+            ('/lio/odom', '/state_estimation'),
+            ('/lio/cloud_world', '/registered_scan'),
+        ]
     )
 
     rviz2_node = Node(

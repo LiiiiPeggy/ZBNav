@@ -50,12 +50,6 @@ def generate_launch_description():
     )
   )
 
-  start_super_lio_bridge = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(os.path.join(
-      get_package_share_directory('super_lio_bridge'), 'launch', 'super_lio_bridge.launch.py')
-    )
-  )
-
   start_joy = Node(
     package='joy', 
     executable='joy_node',
@@ -95,7 +89,6 @@ def generate_launch_description():
   ld.add_action(start_terrain_analysis)
   ld.add_action(start_terrain_analysis_ext)
   ld.add_action(start_sensor_scan_generation)
-  ld.add_action(start_super_lio_bridge)
   ld.add_action(start_joy)
   ld.add_action(delayed_start_rviz)
 
