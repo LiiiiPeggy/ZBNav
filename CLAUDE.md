@@ -54,7 +54,6 @@ rslidar_sdk (driver) → rs_converter (format) → SLAM/super_lio (odometry) →
   - `basic` — shared library: Eigen type aliases, manifold math (SO3/SE3/S2), ring buffers (must be built first)
   - `super_lio` — ESKF-based LIO with 18-D state (R, p, v, bg, ba, g). OctVoxMap for scan-to-map registration. State machine: `stateWaitKFInit` → `stateWaitMapInit` → `stateProcess`. Nodes: `super_lio_node` (online SLAM), `relocation_node` (global localization against pre-built map)
 - **`cmu_planner`** — Path planning and terrain analysis stack (CMU):
-  - `super_lio_bridge` — bridges SLAM output (`/lio/odom`, `/lio/cloud_world`) to `/state_estimation` + `/registered_scan`
   - `loam_interface` — LOAM interface for perception-planning coupling
   - `local_planner` — local path planning
   - `terrain_analysis` / `terrain_analysis_ext` — terrain traversability analysis
@@ -87,8 +86,8 @@ rslidar_sdk (driver) → rs_converter (format) → SLAM/super_lio (odometry) →
 | `/rslidar_points` | `rslidar_sdk` | `rs_converter` |
 | `/velodyne_points` | `rs_converter` | downstream SLAM nodes |
 | `/livox/lidar` (CustomMsg) | Livox driver | `super_lio`, `lidar_imu_init` |
-| `/lio/odom`, `/lio/cloud_world` | `super_lio` | `super_lio_bridge` |
-| `/state_estimation`, `/registered_scan` | `super_lio_bridge` | `local_planner`, `terrain_analysis` |
+| `/lio/odom`, `/lio/cloud_world` | `super_lio` | remapped → `/state_estimation`, `/registered_scan` |
+| `/state_estimation`, `/registered_scan` | `super_lio` (via remap) or `odin_ros_driver` (via remap) | `local_planner`, `terrain_analysis` |
 | `/odom` | `super_lio` | — |
 | `/Pose6D`, `/States` | `lidar_imu_init` | — |
 
