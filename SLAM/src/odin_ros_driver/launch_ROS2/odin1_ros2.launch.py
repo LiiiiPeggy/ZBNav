@@ -35,7 +35,11 @@ def generate_launch_description():
        # arguments=['--ros-args', '--log-level', 'debug'],
         parameters=[{
             'config_file': LaunchConfiguration('config_file')
-        }]
+        }],
+        remappings=[
+            ('odin1/odometry', '/state_estimation'),
+            ('odin1/cloud_slam', '/registered_scan'),
+        ]
     )
 
     pcd2depth_config_path = os.path.join(package_dir, 'config', 'control_command.yaml')
