@@ -1,4 +1,5 @@
-docker exec -it 48336d22744f bash
+docker start nav_gui
+docker exec -it nav_gui bash
 exit
 
 sudo apt install ros-humble-foxglove-bridge
@@ -50,3 +51,10 @@ cd ~/work/wyx/lqp/cmu_planner
 colcon build --symlink-install \
   --packages-skip vehicle_simulator velodyne_simulator velodyne_gazebo_plugins velodyne_description
 ros2 launch super_lio_bridge bringup.launch.py
+
+
+cd ~/work/wyx/lqp/odin_ws/src/odin_ros_driver/script
+bash ./build_ros2.sh
+cd ~/work/wyx/lqp/odin_ws
+source install/setup.bash
+ros2 launch odin_ros_driver odin1_ros2.launch.py
