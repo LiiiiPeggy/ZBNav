@@ -396,13 +396,27 @@ elseif(ROS_VERSION STREQUAL "ROS2")
         message_filters
     )
 
+    add_executable(registered_scan_adapter_node
+        src/registered_scan_adapter_node.cpp
+    )
+    target_link_libraries(registered_scan_adapter_node
+        ${PCL_LIBRARIES}
+    )
+    ament_target_dependencies(registered_scan_adapter_node
+        rclcpp
+        sensor_msgs
+        nav_msgs
+        pcl_conversions
+    )
+
     # Installation rules - ensure all install targets are defined before ament_package()
     # Install executable
-    install(TARGETS 
-        host_sdk_sample 
+    install(TARGETS
+        host_sdk_sample
         pcd2depth_ros2_node
         cloud_reprojection_ros2_node
         image_overlay_node
+        registered_scan_adapter_node
         depth_image_ros2_node_lib
         pointcloud_depth_converter_ros2
         cloud_reprojector_ros2

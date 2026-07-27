@@ -38,8 +38,21 @@ def generate_launch_description():
         }],
         remappings=[
             ('odin1/odometry', '/state_estimation'),
-            ('odin1/cloud_slam', '/registered_scan'),
         ]
+    )
+
+    # Adapter node: XYZRGB→XYZI conversion + vehicle-relative range filtering
+    registered_scan_adapter_node = Node(
+        package='odin_ros_driver',
+        executable='registered_scan_adapter_node',
+        name='registered_scan_adapter_node',
+        output='screen',
+        parameters=[{
+            'scan_min_range': 0.2,
+            'input_topic': '/odin1/cloud_slam',
+            'output_topic': '/registered_scan',
+            'state_topic': '/state_estimation',
+        }]
     )
 
     pcd2depth_config_path = os.path.join(package_dir, 'config', 'control_command.yaml')
@@ -95,6 +108,7 @@ def generate_launch_description():
     ld.add_action(config_file_arg)
     ld.add_action(rviz_config_arg)  # Add RViz configuration argument
     ld.add_action(host_sdk_node)
+    ld.add_action(registered_scan_adapter_node)
     ld.add_action(pcd2depth_node)
     ld.add_action(cloud_reprojection_node)
     ld.add_action(image_overlay_node)
