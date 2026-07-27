@@ -71,7 +71,7 @@ register_keys:
   # 290 表示 dToF 以 10 Hz 输出，同时相机以 29 Hz 输出。
   # 更高帧率可以获得更平滑的点云，但会增加 USB 带宽、
   # 主机计算资源和 ROS 数据传输压力。
-  dtof_fps: 145  # 100：10 fps；145：14.5 fps；290：dToF 10 Hz + 相机 29 Hz
+  dtof_fps: 100  # 100：10 fps；145：14.5 fps；290：dToF 10 Hz + 相机 29 Hz
 
   # 是否发布 SLAM 算法使用或生成的点云数据。
   sendcloudslam: 1  # 0：关闭；1：开启
