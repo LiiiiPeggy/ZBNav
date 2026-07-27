@@ -44,18 +44,18 @@ const double PI = 3.1415926;
 #define PLOTPATHSET 1
 
 string pathFolder;
-double vehicleLength = 0.6;
+double vehicleLength = 0.8;
 double vehicleWidth = 0.6;
 double sensorOffsetX = 0;
 double sensorOffsetY = 0;
-bool twoWayDrive = true;
+bool twoWayDrive = false;
 double laserVoxelSize = 0.05;
 double terrainVoxelSize = 0.2;
 bool useTerrainAnalysis = false;
 bool checkObstacle = true;
 bool checkRotObstacle = false;
 double adjacentRange = 3.5;
-double obstacleHeightThre = 0.2;
+double obstacleHeightThre = 0.3;
 double groundHeightThre = 0.1;
 double costHeightThre = 0.1;
 double costScore = 0.02;

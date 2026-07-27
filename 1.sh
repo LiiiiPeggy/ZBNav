@@ -7,7 +7,31 @@
 # ============================================================
 # 0. Docker 与可视化工具
 # ============================================================
-# docker start nav_gui && docker exec -it nav_gui bash
+# 删除旧容器
+docker stop nav_gui 2>/dev/null; docker rm nav_gui 2>/dev/null
+
+# 重新创建容器，挂载 Xauthority 文件并传递 DISPLAY
+docker run -it \
+    --net=host \
+    --privileged \
+    -e DISPLAY=$DISPLAY \
+    -e QT_X11_NO_MITSHM=1 \
+    -e ROS_DOMAIN_ID=71 \
+    -e FASTRTPS_DEFAULT_PROFILES_FILE=/root/env/ros2/rk3588_eth_binding.xml \
+    -e TZ=Asia/Shanghai \
+    -e LANG=en_US.UTF-8 \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v $HOME/.Xauthority:/root/.Xauthority:ro \
+    -v /home/siasun/panda3_2026_06_16/panda3/docker/env/ros2:/root/env/ros2:ro \
+    -v /home/siasun/panda3_2026_06_16/panda3/src/wyx:/root/work/wyx \
+    --name nav_gui \
+    3dnav \
+    bash
+
+docker start nav_gui 
+echo 'export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp' >> ~/.bashrc
+
+docker exec -it nav_gui bash
 # exit
 
 # Foxglove Bridge (可选)
@@ -18,9 +42,8 @@
 # ============================================================
 # 1. 系统依赖 (一次性)
 # ============================================================
-sudo apt install -y libpcap-dev ros-humble-pcl-conversions libpcl-dev libeigen3-dev \
-  libgoogle-glog-dev libtbb-dev ros-humble-pcl-ros libceres-dev
-
+sudo apt update && apt install -y libpcap-dev ros-humble-pcl-conversions libpcl-dev libeigen3-dev libgoogle-glog-dev libtbb-dev ros-humble-pcl-ros libceres-dev ros-humble-rmw-cyclonedds-cpp usbutils
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # ============================================================
 # 2. 编译 Supports (Livox SDK + ROS2 Driver)
@@ -39,7 +62,7 @@ cd ~/work/wyx/lqp/supports/ws_livox && source install/setup.bash
 # 3. 编译 robosense_ws (LiDAR 驱动)
 # ============================================================
 cd ~/work/wyx/lqp/robosense_ws
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --symlink-install 
 source install/setup.bash
 
 
@@ -47,7 +70,7 @@ source install/setup.bash
 # 4. 编译 rs_converter_ws (格式转换)
 # ============================================================
 cd ~/work/wyx/lqp/rs_converter_ws
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --symlink-install 
 source install/setup.bash
 
 
@@ -55,10 +78,12 @@ source install/setup.bash
 # 5. 编译 SLAM (basic → super_lio → odin_ros_driver)
 # ============================================================
 source ~/work/wyx/lqp/supports/ws_livox/install/setup.bash
+cd ~/work/wyx/lqp/SLAM/src/odin_ros_driver/script
+bash ./build_ros2.sh
+
 cd ~/work/wyx/lqp/SLAM
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select basic
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select super_lio
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select odin_ros_driver
+colcon build --symlink-install  --packages-select basic
+colcon build --symlink-install  --packages-select super_lio
 source install/setup.bash
 
 
@@ -66,8 +91,7 @@ source install/setup.bash
 # 6. 编译 cmu_planner (规划栈)
 # ============================================================
 cd ~/work/wyx/lqp/cmu_planner
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release \
-  --packages-skip vehicle_simulator velodyne_simulator velodyne_gazebo_plugins velodyne_description
+colcon build --symlink-install --packages-skip velodyne_simulator velodyne_gazebo_plugins velodyne_description
 source install/setup.bash
 
 
@@ -130,61 +154,19 @@ ros2 bag play my_bag --storage mcap --qos-profile-overrides-path ~/work/wyx/lqp/
 # ============================================================
 # 9. 运行时数据频率检查
 # ============================================================
-echo ""
-echo "==================== 数据链路检查 ===================="
-echo ""
-
-# 9.1 检查关键 topic 是否存在
-echo ">>> 关键 Topic 列表:"
-ros2 topic list 2>/dev/null | grep -E "state_estimation|registered_scan|path|terrain_map|cmd_vel|way_point|joy|velodyne_points|rslidar_points"
-
-# 9.2 逐个检查频率 (Ctrl+C 停止)
-echo ""
-echo ">>> 检查各 Topic 频率 (每 3 秒采样):"
-echo ""
-
-check_hz() {
-    local topic=$1
-    local expected=$2
-    echo -n "  $topic (期望 $expected): "
-    local result=$(timeout 4 ros2 topic hz "$topic" 2>&1 | tail -1)
-    if [ -z "$result" ]; then
-        echo "❌ 无数据或无发布者"
-    else
-        echo "$result"
-    fi
-}
-
-# Odin / super_lio 输出 (remap 后汇入 CMU)
-check_hz "/state_estimation"    "~10 Hz"
-check_hz "/registered_scan"     "~10 Hz"
+# SLAM 输出 → CMU 规划输入
+ros2 topic hz /state_estimation      # 期望 ~10 Hz
+ros2 topic hz /registered_scan       # 期望 ~10 Hz
 
 # CMU 规划输出
-check_hz "/path"                 "~10 Hz"
-check_hz "/terrain_map"          "1-5 Hz"
-check_hz "/terrain_map_ext"      "1-5 Hz"
-check_hz "/cmd_vel"              "手柄触发后 10-50 Hz"
+ros2 topic hz /path                  # 期望 ~10 Hz
+ros2 topic hz /terrain_map            # 期望 1-5 Hz
+ros2 topic hz /terrain_map_ext        # 期望 1-5 Hz
+ros2 topic hz /cmd_vel               # 期望 有手柄控制时 10-50 Hz
 
-# LiDAR 原始数据
-check_hz "/rslidar_points"       "~10 Hz"
-check_hz "/velodyne_points"      "~10 Hz"
+# 原始 LiDAR 数据
+ros2 topic hz /rslidar_points        # 期望 ~10 Hz
+ros2 topic hz /velodyne_points       # 期望 ~10 Hz
 
 # 手柄
-check_hz "/joy"                  "20-50 Hz"
-
-# 9.3 检查 QoS 匹配
-echo ""
-echo ">>> QoS 检查:"
-for t in /state_estimation /registered_scan /path; do
-    echo "  $t:"
-    ros2 topic info "$t" 2>/dev/null | grep -E "Publisher|Subscription|Reliability" | sed 's/^/    /'
-done
-
-# 9.4 检查内容非空
-echo ""
-echo ">>> 内容抽查 (echo --once):"
-ros2 topic echo /state_estimation --once --field pose 2>/dev/null | head -3
-ros2 topic echo /registered_scan --once --field header 2>/dev/null | head -3
-
-echo ""
-echo "==================== 检查完毕 ===================="
+ros2 topic hz /joy                   # 期望 20-50 Hz
