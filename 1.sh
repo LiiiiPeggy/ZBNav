@@ -7,28 +7,60 @@
 # ============================================================
 # 0. Docker 与可视化工具
 # ============================================================
+# MobaXterm SSH X11 转发：容器 --net=host 下访问不到 localhost 隧道，
+# 需获取 MobaXterm 所在 Windows 的真实 IP 作为 DISPLAY 地址。
+xhost + 2>/dev/null
+DISPLAY_IP=$(echo $SSH_CLIENT | awk '{print $1}')
+if [ -z "$DISPLAY_IP" ]; then
+    DISPLAY_IP="localhost"
+fi
+echo "DISPLAY_IP=$DISPLAY_IP"
+
 # 删除旧容器
 docker stop nav_gui 2>/dev/null; docker rm nav_gui 2>/dev/null
 
+# -------- 版本1：狗1（旧版本 3dnav 镜像） --------
 # 重新创建容器，挂载 Xauthority 文件并传递 DISPLAY
+# docker run -it \
+#     --net=host \
+#     --privileged \
+#     -e DISPLAY=${DISPLAY_IP}:0.0 \
+#     -e QT_X11_NO_MITSHM=1 \
+#     -e ROS_DOMAIN_ID=71 \
+#     -e FASTRTPS_DEFAULT_PROFILES_FILE=/root/env/ros2/rk3588_eth_binding.xml \
+#     -e TZ=Asia/Shanghai \
+#     -e LANG=en_US.UTF-8 \
+#     -v /tmp/.X11-unix:/tmp/.X11-unix \
+#     -v $HOME/.Xauthority:/root/.Xauthority:ro \
+#     -v /home/siasun/panda3_2026_06_16/panda3/docker/env/ros2:/root/env/ros2:ro \
+#     -v /home/siasun/panda3_2026_06_16/panda3/src/wyx:/root/work/wyx \
+#     --name nav_gui \
+#     3dnav \
+#     bash
+
+# -------- 版本2：狗2（当前版本） --------
 docker run -it \
     --net=host \
     --privileged \
-    -e DISPLAY=$DISPLAY \
+    -e DISPLAY=${DISPLAY_IP}:0.0 \
     -e QT_X11_NO_MITSHM=1 \
-    -e ROS_DOMAIN_ID=71 \
+    -e ROS_DOMAIN_ID=60 \
     -e FASTRTPS_DEFAULT_PROFILES_FILE=/root/env/ros2/rk3588_eth_binding.xml \
     -e TZ=Asia/Shanghai \
     -e LANG=en_US.UTF-8 \
+    -e OMP_NUM_THREADS=1 \
+    -e MKL_NUM_THREADS=1 \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v $HOME/.Xauthority:/root/.Xauthority:ro \
-    -v /home/siasun/panda3_2026_06_16/panda3/docker/env/ros2:/root/env/ros2:ro \
-    -v /home/siasun/panda3_2026_06_16/panda3/src/wyx:/root/work/wyx \
+    -v /dev:/dev:rw \
+    -v /home/siasun/panda3_2026_07_17/panda3/docker/env/ros2:/root/env/ros2:ro \
+    -v /home/siasun/panda3_2026_07_17/panda3/src/wyx:/root/work/wyx \
     --name nav_gui \
-    3dnav \
+    192.168.1.29/robot-dog/bottom-control:2026-2-04-1 \
     bash
 
-docker start nav_gui 
+# 后续启动已创建的容器
+docker start nav_gui
 echo 'export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp' >> ~/.bashrc
 
 docker exec -it nav_gui bash
@@ -42,7 +74,7 @@ docker exec -it nav_gui bash
 # ============================================================
 # 1. 系统依赖 (一次性)
 # ============================================================
-sudo apt update && apt install -y libpcap-dev ros-humble-pcl-conversions libpcl-dev libeigen3-dev libgoogle-glog-dev libtbb-dev ros-humble-pcl-ros libceres-dev ros-humble-rmw-cyclonedds-cpp usbutils
+sudo apt update && apt install -y x11-apps libpcap-dev ros-humble-pcl-conversions libpcl-dev libeigen3-dev libgoogle-glog-dev libtbb-dev ros-humble-pcl-ros libceres-dev ros-humble-rmw-cyclonedds-cpp usbutils
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # ============================================================
