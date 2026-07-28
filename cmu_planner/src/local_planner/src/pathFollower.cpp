@@ -15,7 +15,7 @@
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/int8.hpp>
 #include <nav_msgs/msg/path.hpp>
-#include <geometry_msgs/msg/twist_stamped.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <sensor_msgs/msg/imu.h>
 
 #include "tf2/transform_datatypes.h"
@@ -257,11 +257,9 @@ int main(int argc, char** argv)
 
   auto subStop = nh->create_subscription<std_msgs::msg::Int8>("/stop", 5, stopHandler);
 
-  // auto pubSpeed = nh->create_publisher<geometry_msgs::msg::TwistStamped>("/cmd_vel", 5);
-  auto pubSpeed = nh->create_publisher<geometry_msgs::msg::TwistStamped>("/cmd_vel_stamped", 5);
+  auto pubSpeed = nh->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 5);
 
-  geometry_msgs::msg::TwistStamped cmd_vel;
-  cmd_vel.header.frame_id = "vehicle";
+  geometry_msgs::msg::Twist cmd_vel;
 
   if (autonomyMode) {
     joySpeed = autonomySpeed / maxSpeed;
@@ -367,10 +365,9 @@ int main(int argc, char** argv)
 
       pubSkipCount--;
       if (pubSkipCount < 0) {
-        cmd_vel.header.stamp = rclcpp::Time(static_cast<uint64_t>(odomTime * 1e9));
-        if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.twist.linear.x = 0;
-        else cmd_vel.twist.linear.x = vehicleSpeed;
-        cmd_vel.twist.angular.z = vehicleYawRate;
+        if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.linear.x = 0;
+        else cmd_vel.linear.x = vehicleSpeed;
+        cmd_vel.angular.z = vehicleYawRate;
         pubSpeed->publish(cmd_vel);
 
         pubSkipCount = pubSkipNum;
