@@ -4,9 +4,9 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Waypoint1
         - /TF1
         - /TF1/Tree1
-        - /TF1/Tree1/map1/base1
       Splitter Ratio: 0.729411780834198
     Tree Height: 684
   - Class: rviz_common/Selection
@@ -253,7 +253,7 @@ Visualization Manager:
       Enabled: true
       History Length: 1
       Name: Waypoint
-      Radius: 1.2000000476837158
+      Radius: 0.5
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -518,25 +518,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 40.40394592285156
+      Distance: 13.911924362182617
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.601590156555176
-        Y: -0.9312978982925415
-        Z: -0.002724643563851714
+        X: 2.4874980449676514
+        Y: -0.46864089369773865
+        Z: -0.83977872133255
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.3697961568832397
+      Pitch: 1.3947961330413818
       Target Frame: vehicle
       Value: Orbit (rviz)
-      Yaw: 1.3754040002822876
+      Yaw: 2.370404005050659
     Saved: ~
 Window Geometry:
   Displays:
@@ -556,5 +556,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1440
-  X: 0
-  Y: 23
+  X: 8
+  Y: 31
