@@ -60,7 +60,7 @@
     <param name="twoWayDrive" value="$(var twoWayDrive)" />
     <param name="lookAheadDis" value="0.5" />
     <param name="yawRateGain" value="7.5" />
-    <param name="stopYawRateGain" value="3.0" />
+    <param name="stopYawRateGain" value="7.5" />
     <param name="maxYawRate" value="45.0" />
     <param name="maxSpeed" value="$(var maxSpeed)" />
     <param name="maxAccel" value="2.5" />
