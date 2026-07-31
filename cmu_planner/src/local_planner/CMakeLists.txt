@@ -30,12 +30,15 @@ find_package(pcl_ros REQUIRED)
 
 add_executable(localPlanner src/localPlanner.cpp)
 add_executable(pathFollower src/pathFollower.cpp)
+add_executable(cruiseController src/cruiseController.cpp)
 ament_target_dependencies(localPlanner rclcpp std_msgs sensor_msgs nav_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs message_filters pcl_ros pcl_conversions)
 ament_target_dependencies(pathFollower rclcpp std_msgs sensor_msgs nav_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs message_filters pcl_ros pcl_conversions)
+ament_target_dependencies(cruiseController rclcpp geometry_msgs nav_msgs std_msgs)
 
 install(TARGETS
   localPlanner
   pathFollower
+  cruiseController
   DESTINATION lib/${PROJECT_NAME})
 
 install(
