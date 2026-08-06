@@ -30,11 +30,16 @@ colcon build --symlink-install --packages-select basic
 colcon build --symlink-install --packages-select super_lio
 colcon build --symlink-install --packages-select odin_ros_driver
 
-# 4. cmu_planner — planning stack (skip simulation packages if not needed)
+# 4. cmu_planner — planning stack
 cd cmu_planner
-colcon build --symlink-install \
-  --packages-skip vehicle_simulator velodyne_simulator velodyne_gazebo_plugins velodyne_description
+colcon build --symlink-install
 ```
+
+> **Note**: `vehicle_simulator` builds the `vehicleSimulator` binary only when Gazebo
+> is installed (its gazebo deps are `QUIET`/optional); launch files, rviz configs and
+> `cruiseController` always build. Velodyne simulation packages were removed.
+> Convenience scripts: `1build.sh` (build), `2run.sh` (planner only), `3cruise.sh`
+> (planner + cruise, `[CRUISE]`-filtered output), `4debug.sh` (planner + cruise, full output).
 
 Each workspace is an **independent colcon workspace** — source them separately with `source install/setup.bash`.
 
@@ -48,7 +53,7 @@ rslidar_sdk (driver) → rs_converter (format) → SLAM/super_lio (odometry) →
                                               Odin 自带 SLAM → cmu_planner (planning)
 ```
 
-Two interchangeable SLAM backends, both remap to the same CMU planner topics.
+Two interchangeable SLAM backends, both remap to the same CMU planner topics. When using Odin, `registered_scan_adapter_node` (in `odin_ros_driver`) converts its `PointXYZRGB` `/odin1/cloud_slam` into the `PointXYZI` format CMU planner expects (drops rgb, sets `intensity=0`, filters points closer than `scan_min_range` from the vehicle via `/state_estimation`), publishing to `/registered_scan`.
 
 ### Workspaces
 
@@ -60,11 +65,11 @@ Two interchangeable SLAM backends, both remap to the same CMU planner topics.
   - `super_lio` — ESKF-based LIO with 18-D state (R, p, v, bg, ba, g). OctVoxMap for scan-to-map registration. State machine: `stateWaitKFInit` → `stateWaitMapInit` → `stateProcess`. Nodes: `super_lio_node` (online SLAM), `relocation_node` (global localization against pre-built map)
   - `odin_ros_driver` — Odin 深度传感器 ROS 2 驱动，自带 SLAM 里程计和建图。配置: `config/control_command.yaml` (传感器参数、数据开关、重定位)
 - **`cmu_planner`** — Path planning and terrain analysis stack (CMU):
-  - `local_planner` — local path planning + path following
+  - `local_planner` — local path planning + path following; also hosts `cruiseController` (patrol round-trip: go → turn 180° → return → turn 180°, yaw-closed-loop turning via `/state_estimation`)
   - `terrain_analysis` / `terrain_analysis_ext` — terrain traversability analysis
   - `sensor_scan_generation` — synthetic scan generation for planning
   - `waypoint_example` / `waypoint_rviz_plugin` — waypoint following
-  - `vehicle_simulator` / `velodyne_simulator` / `velodyne_gazebo_plugins` — simulation (build with `--packages-skip` to exclude)
+  - `vehicle_simulator` — simulation + system launch aggregator (`system_real_robot.launch`); gazebo deps optional (`vehicleSimulator` binary skipped if no gazebo)
   - `visualization_tools` / `panda3v2_description` / `loam_interface` — viz and legacy adapters
 - **`supports`** — Build dependencies: `Livox-SDK2` (LiDAR SDK library), `ws_livox/livox_ros_driver2` (Livox ROS 2 driver wrapper)
 
@@ -102,13 +107,15 @@ SLAM 输出通过 launch 文件 remap 统一对接 CMU 规划栈，**无需 brid
 | `/rslidar_points` | `rslidar_sdk` | `rs_converter` |
 | `/velodyne_points` | `rs_converter` | `super_lio` |
 | `/livox/lidar` (CustomMsg) | Livox driver | `super_lio`, `lidar_imu_init` |
-| `/state_estimation` | `super_lio` (via remap) or `odin_ros_driver` (via remap) | `local_planner`, `terrain_analysis`, `terrain_analysis_ext`, `waypoint_example`, `waypoint_rviz_plugin`, `visualization_tools` |
-| `/registered_scan` | `super_lio` (via remap) or `odin_ros_driver` (via remap) | `local_planner`, `terrain_analysis`, `terrain_analysis_ext`, `visualization_tools` |
+| `/state_estimation` | `super_lio` (via remap) or `odin_ros_driver` (via remap) | `local_planner`, `terrain_analysis`, `terrain_analysis_ext`, `waypoint_example`, `waypoint_rviz_plugin`, `visualization_tools`, `cruiseController` |
+| `/registered_scan` | `super_lio` (via remap) or `odin_ros_driver` → `registered_scan_adapter_node` | `local_planner`, `terrain_analysis`, `terrain_analysis_ext`, `visualization_tools` |
 | `/path` | `local_planner` | `pathFollower` |
 | `/terrain_map` | `terrain_analysis` | `local_planner`, `terrain_analysis_ext` |
-| `/cmd_vel` | `pathFollower` | robot / `vehicle_simulator` |
-| `/way_point` | `waypoint_rviz_plugin`, `waypoint_example` | `local_planner` |
-| `/joy` | `joy_node` | `local_planner`, `terrain_analysis`, `terrain_analysis_ext` |
+| `/cmd_vel` | `pathFollower` (travel) or `cruiseController` (turns) | robot / `vehicle_simulator` |
+| `/way_point` | `waypoint_rviz_plugin`, `waypoint_example`, `cruiseController` | `local_planner` |
+| `/way_point_cruise` | RViz waypoint tool (when `enableCruise:=true`) | `cruiseController` |
+| `/stop` | `cruiseController` | `pathFollower` (data 2 = full stop, cruise takes over `/cmd_vel`) |
+| `/joy` | `joy_node` | `local_planner`, `terrain_analysis`, `terrain_analysis_ext`, `pathFollower` |
 
 ### Key build-time flags
 
