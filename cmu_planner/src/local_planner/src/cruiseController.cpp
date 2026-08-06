@@ -55,6 +55,18 @@ public:
   }
 
 private:
+  const char * stateName(CruiseState s)
+  {
+    switch (s) {
+      case CruiseState::IDLE: return "IDLE";
+      case CruiseState::GO_TO_DEST: return "GO_TO_DEST";
+      case CruiseState::TURN_AT_DEST: return "TURN_AT_DEST";
+      case CruiseState::RETURN_TO_START: return "RETURN_TO_START";
+      case CruiseState::TURN_AT_START: return "TURN_AT_START";
+      default: return "UNKNOWN";
+    }
+  }
+
   double yawFromQuaternion(const geometry_msgs::msg::Quaternion & q)
   {
     double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
@@ -98,7 +110,7 @@ private:
     dest_x_ = msg->point.x;
     dest_y_ = msg->point.y;
     RCLCPP_INFO(this->get_logger(),
-      "Starting cruise: (%.1f, %.1f) -> (%.1f, %.1f)",
+      "[CRUISE][INPUT] start=(%.3f, %.3f), destination=(%.3f, %.3f)",
       start_x_, start_y_, dest_x_, dest_y_);
     sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
   }
@@ -130,7 +142,9 @@ private:
     stop_pub_->publish(stop_msg);
 
     state_ = next_state;
-    RCLCPP_INFO(this->get_logger(), "Waypoint set to (%.1f, %.1f)", x, y);
+    RCLCPP_INFO(this->get_logger(),
+      "[CRUISE][WAYPOINT] phase=%s, publish /way_point: x=%.3f, y=%.3f",
+      stateName(next_state), x, y);
   }
 
   void startTurn(CruiseState next_state)
@@ -142,8 +156,8 @@ private:
     target_yaw_ = normalizeAngle(current_yaw_ + M_PI);
     state_ = next_state;
     RCLCPP_INFO(this->get_logger(),
-      "Starting 180-degree turn, target_yaw=%.2f (current=%.2f)",
-      target_yaw_, current_yaw_);
+      "[CRUISE] Starting 180-degree turn: %s, target_yaw=%.3f (current=%.3f)",
+      stateName(next_state), target_yaw_, current_yaw_);
   }
 
   void publishTurnCmd()
@@ -186,7 +200,7 @@ private:
       dy = current_y_ - dest_y_;
       dist_sq = dx * dx + dy * dy;
       if (dist_sq < goal_clear_range_sq) {
-        RCLCPP_INFO(this->get_logger(), "Destination reached, turning...");
+        RCLCPP_INFO(this->get_logger(), "[CRUISE] Destination reached, turning...");
         startTurn(CruiseState::TURN_AT_DEST);
       }
       return;
@@ -194,7 +208,7 @@ private:
     case CruiseState::TURN_AT_DEST:
       if (turnDone()) {
         publishZeroCmd();
-        RCLCPP_INFO(this->get_logger(), "Turn done, returning to start...");
+        RCLCPP_INFO(this->get_logger(), "[CRUISE] Turn done, returning to start...");
         sendWaypointAndGo(start_x_, start_y_, CruiseState::RETURN_TO_START);
       } else {
         publishTurnCmd();
@@ -206,7 +220,7 @@ private:
       dy = current_y_ - start_y_;
       dist_sq = dx * dx + dy * dy;
       if (dist_sq < goal_clear_range_sq) {
-        RCLCPP_INFO(this->get_logger(), "Start reached, turning...");
+        RCLCPP_INFO(this->get_logger(), "[CRUISE] Start reached, turning...");
         startTurn(CruiseState::TURN_AT_START);
       }
       return;
@@ -214,7 +228,7 @@ private:
     case CruiseState::TURN_AT_START:
       if (turnDone()) {
         publishZeroCmd();
-        RCLCPP_INFO(this->get_logger(), "Cruise complete!");
+        RCLCPP_INFO(this->get_logger(), "[CRUISE] Cruise complete!");
         state_ = CruiseState::IDLE;
       } else {
         publishTurnCmd();
