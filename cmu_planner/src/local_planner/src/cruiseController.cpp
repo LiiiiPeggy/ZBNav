@@ -19,6 +19,7 @@ public:
   CruiseController()
   : Node("cruise_controller"),
     state_(CruiseState::IDLE),
+    has_odom_(false),
     start_x_(0.0), start_y_(0.0),
     dest_x_(0.0), dest_y_(0.0),
     current_x_(0.0), current_y_(0.0),
@@ -73,26 +74,45 @@ private:
     current_x_ = msg->pose.pose.position.x;
     current_y_ = msg->pose.pose.position.y;
     current_yaw_ = yawFromQuaternion(msg->pose.pose.orientation);
-
-    if (state_ == CruiseState::IDLE) {
-      start_x_ = current_x_;
-      start_y_ = current_y_;
-    }
+    has_odom_ = true;
   }
 
   void waypointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
   {
+    if (!has_odom_) {
+      RCLCPP_WARN(this->get_logger(),
+        "No /state_estimation received, ignoring cruise waypoint");
+      return;
+    }
+
     if (state_ != CruiseState::IDLE) {
       RCLCPP_WARN(this->get_logger(),
         "Already cruising, ignoring new waypoint");
       return;
     }
+
+    // 收到目标时锁定起点（当前实时位置）
+    start_x_ = current_x_;
+    start_y_ = current_y_;
+
     dest_x_ = msg->point.x;
     dest_y_ = msg->point.y;
     RCLCPP_INFO(this->get_logger(),
       "Starting cruise: (%.1f, %.1f) -> (%.1f, %.1f)",
       start_x_, start_y_, dest_x_, dest_y_);
     sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
+  }
+
+  void publishZeroCmd()
+  {
+    geometry_msgs::msg::Twist cmd;
+    cmd.linear.x = 0.0;
+    cmd.linear.y = 0.0;
+    cmd.linear.z = 0.0;
+    cmd.angular.x = 0.0;
+    cmd.angular.y = 0.0;
+    cmd.angular.z = 0.0;
+    cmd_vel_pub_->publish(cmd);
   }
 
   void sendWaypointAndGo(double x, double y, CruiseState next_state)
@@ -172,10 +192,12 @@ private:
       return;
 
     case CruiseState::TURN_AT_DEST:
-      publishTurnCmd();
       if (turnDone()) {
+        publishZeroCmd();
         RCLCPP_INFO(this->get_logger(), "Turn done, returning to start...");
         sendWaypointAndGo(start_x_, start_y_, CruiseState::RETURN_TO_START);
+      } else {
+        publishTurnCmd();
       }
       return;
 
@@ -190,16 +212,19 @@ private:
       return;
 
     case CruiseState::TURN_AT_START:
-      publishTurnCmd();
       if (turnDone()) {
+        publishZeroCmd();
         RCLCPP_INFO(this->get_logger(), "Cruise complete!");
         state_ = CruiseState::IDLE;
+      } else {
+        publishTurnCmd();
       }
       return;
     }
   }
 
   CruiseState state_;
+  bool has_odom_;
   double start_x_, start_y_, dest_x_, dest_y_;
   double current_x_, current_y_, current_yaw_;
   double target_yaw_;

@@ -365,10 +365,14 @@ int main(int argc, char** argv)
 
       pubSkipCount--;
       if (pubSkipCount < 0) {
-        if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.linear.x = 0;
-        else cmd_vel.linear.x = vehicleSpeed;
-        cmd_vel.angular.z = vehicleYawRate;
-        pubSpeed->publish(cmd_vel);
+        // safetyStop == 2 时完全停止发布 /cmd_vel，
+        // 把控制权交给 cruiseController（原地掉头期间）
+        if (safetyStop < 2) {
+          if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.linear.x = 0;
+          else cmd_vel.linear.x = vehicleSpeed;
+          cmd_vel.angular.z = vehicleYawRate;
+          pubSpeed->publish(cmd_vel);
+        }
 
         pubSkipCount = pubSkipNum;
       }
