@@ -123,7 +123,7 @@ source install/setup.bash
 # 6. 编译 cmu_planner (规划栈)
 # ============================================================
 cd ~/work/wyx/lqp/cmu_planner
-colcon build --symlink-install --packages-skip velodyne_simulator velodyne_gazebo_plugins velodyne_description
+colcon build --symlink-install
 source install/setup.bash
 
 
