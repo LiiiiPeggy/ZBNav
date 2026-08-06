@@ -10,6 +10,7 @@
     <param name="yaw_kp" value="$(var yaw_kp)" />
     <param name="yaw_tolerance" value="$(var yaw_tolerance)" />
     <param name="goal_clear_range" value="$(var goal_clear_range)" />
+    <remap from="/way_point_cruise" to="/way_point"/>
   </node>
 
 </launch>
