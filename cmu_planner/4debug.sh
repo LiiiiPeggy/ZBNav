@@ -3,5 +3,4 @@ source install/setup.bash
 
 ros2 launch vehicle_simulator system_real_robot.launch \
   enableCruise:=true \
-  rvizWaypointTopic:=/way_point_cruise \
-  2>&1 | grep --line-buffered CRUISE
+  rvizWaypointTopic:=/way_point_cruise
