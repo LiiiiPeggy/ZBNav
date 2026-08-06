@@ -66,10 +66,14 @@ single-pass behavior identical. `3cruise.sh` unaffected.
 - Reached → `completed_loops_ = 0`, `state_ = IDLE`, log complete.
 
 **R4 — External stop.** Subscribe `/stop` (`std_msgs/Int8`). `data >= 2`:
+- The node's own `/stop=2` (published at `startTurn()`) is consumed via
+  `ignore_next_internal_stop_` and NOT treated as external.
 - Outside a turn → `publishZeroCmd()`, reset counters, `state_ = IDLE`, log
   abort.
 - During a turn (`turning_internal_ == true`) → set `pending_stop_ = true`,
-  log "queued"; after the turn completes, immediately stop.
+  log "queued"; a queued stop is honored at BOTH `TURN_AT_DEST` and
+  `TURN_AT_START` completion via `consumePendingStop()` — the robot stops as
+  soon as the current turn finishes, no return leg is driven after a stop.
 - Single mode (`repeat_enabled=false`): do NOT subscribe/respond (keep current
   behavior).
 
@@ -94,7 +98,7 @@ stop, retarget. `5repeat.sh` shows only these.
 
 | File | Action | Details |
 |------|--------|---------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | New params (`repeat_enabled`, `loop_count`), members (`completed_loops_`, `turning_internal_`, `pending_stop_`), `/stop` subscription + callback, retarget logic in `waypointCallback`, loop-back in `TURN_AT_START`, `[REPEAT]` logs. |
+| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | New params (`repeat_enabled`, `loop_count`), members (`completed_loops_`, `turning_internal_`, `ignore_next_internal_stop_`, `pending_stop_`), `/stop` subscription + callback, retarget logic in `waypointCallback`, loop-back in `TURN_AT_START`, `consumePendingStop()` at both turn-completion points, `[REPEAT]` logs. |
 | `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Declare/pass `repeat_enabled`, `loop_count` to node. |
 | `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Add `repeat_enabled`, `loop_count` launch args; forward to `cruise.launch` include. |
 | `cmu_planner/5repeat.sh` | Create | Reuse `system_real_robot.launch`, pass repeat args, grep `[REPEAT]`. |
@@ -124,13 +128,17 @@ New members:
 ```cpp
 int completed_loops_ = 0;
 bool turning_internal_ = false;
+bool ignore_next_internal_stop_ = false;
 bool pending_stop_ = false;
 ```
 
-`startTurn()` — set internal flag for the whole turn:
+`startTurn()` — set flags; consume the node's own /stop=2 on the next callback:
 ```cpp
 void startTurn(CruiseState next_state) {
-  turning_internal_ = true;              // suppress self-published /stop=2
+  if (repeat_enabled_) {
+    turning_internal_ = true;
+    ignore_next_internal_stop_ = true;   // consume self-published /stop=2 below
+  }
   auto stop_msg = std_msgs::msg::Int8();
   stop_msg.data = 2;
   stop_pub_->publish(stop_msg);
@@ -140,25 +148,42 @@ void startTurn(CruiseState next_state) {
 }
 ```
 
-`turnDone()` transitions — clear flag on completion:
+`consumePendingStop()` — called at BOTH turn-completion points:
+```cpp
+bool consumePendingStop() {
+  if (!pending_stop_) return false;
+  publishZeroCmd();
+  pending_stop_ = false;
+  completed_loops_ = 0;
+  RCLCPP_WARN(..., "[REPEAT] Queued stop executed after turn");
+  state_ = IDLE;
+  return true;
+}
+```
+
+`turnDone()` transitions — clear flags, honor queued stop at both points:
 ```cpp
 case CruiseState::TURN_AT_DEST:
   if (turnDone()) {
     turning_internal_ = false;
+    ignore_next_internal_stop_ = false;
     publishZeroCmd();
+    if (repeat_enabled_ && consumePendingStop()) return;   // stop here
     ... sendWaypointAndGo(start_x_, start_y_, RETURN_TO_START);
   } else publishTurnCmd();
 case CruiseState::TURN_AT_START:
   if (turnDone()) {
     turning_internal_ = false;
+    ignore_next_internal_stop_ = false;
     publishZeroCmd();
     if (!repeat_enabled_) {            // single mode: unchanged
       state_ = IDLE; return;
     }
+    if (consumePendingStop()) return;  // stop here, no more loops
     completed_loops_++;
-    if (pending_stop_ || (loop_count_ > 0 && completed_loops_ >= loop_count_)) {
+    if (loop_count_ > 0 && completed_loops_ >= loop_count_) {
       int loops_done = completed_loops_;
-      completed_loops_ = 0; pending_stop_ = false;
+      completed_loops_ = 0;
       RCLCPP_INFO(..., "[REPEAT] Cruise complete after %d loops", loops_done);
       state_ = IDLE;
     } else {
@@ -172,17 +197,28 @@ case CruiseState::TURN_AT_START:
 ```cpp
 void stopCallback(const std_msgs::msg::Int8::ConstSharedPtr msg) {
   if (msg->data < 2) return;
+  if (ignore_next_internal_stop_) {   // consume the node's own /stop=2
+    ignore_next_internal_stop_ = false;
+    return;
+  }
   if (turning_internal_) {
-    pending_stop_ = true;
-    RCLCPP_WARN(..., "[REPEAT] Stop during turn queued");
+    pending_stop_ = true;             // real external stop during turn → queue
+    RCLCPP_WARN(..., "[REPEAT] External stop queued during turn");
     return;
   }
   publishZeroCmd();
   completed_loops_ = 0; pending_stop_ = false;
-  RCLCPP_INFO(..., "[REPEAT] Stop received, cruise aborted");
+  RCLCPP_WARN(..., "[REPEAT] Stop received, cruise aborted");
   state_ = IDLE;
 }
 ```
+
+**Why `ignore_next_internal_stop_` is required**: `turning_internal_` stays true
+for the whole turn, so the node's own `/stop=2` (published at `startTurn()`)
+would otherwise be misread as an external stop, setting `pending_stop_` on every
+turn and aborting the cruise after each one. `ignore_next_internal_stop_`
+consumes exactly that one self-publish; subsequent `/stop` messages during the
+turn are genuine external stops and get queued.
 
 `waypointCallback()` retarget (repeat mode):
 ```cpp
@@ -191,6 +227,7 @@ if (repeat_enabled_ && state_ != CruiseState::IDLE) {
   start_x_ = current_x_; start_y_ = current_y_;
   completed_loops_ = 0; pending_stop_ = false;
   turning_internal_ = false;
+  ignore_next_internal_stop_ = false;
   RCLCPP_INFO(..., "[REPEAT] New waypoint, loops reset");
   sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
   return;

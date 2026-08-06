@@ -61,6 +61,7 @@ In the member block (replace lines 240-244):
   int loop_count_;
   int completed_loops_ = 0;
   bool turning_internal_ = false;
+  bool ignore_next_internal_stop_ = false;
   bool pending_stop_ = false;
   double start_x_, start_y_, dest_x_, dest_y_;
   double current_x_, current_y_, current_yaw_;
@@ -111,16 +112,25 @@ Insert after `waypointCallback()` (after line 116), before `publishZeroCmd()`:
   void stopCallback(const std_msgs::msg::Int8::ConstSharedPtr msg)
   {
     if (msg->data < 2) return;
+
+    // Consume the node's own /stop=2 published at startTurn().
+    // Without this, the self-publish would be treated as an external
+    // stop and every turn would immediately abort the cruise.
+    if (ignore_next_internal_stop_) {
+      ignore_next_internal_stop_ = false;
+      return;
+    }
+
     if (turning_internal_) {
       pending_stop_ = true;
       RCLCPP_WARN(this->get_logger(),
-        "[REPEAT] Stop during turn queued");
+        "[REPEAT] External stop queued during turn");
       return;
     }
     publishZeroCmd();
     completed_loops_ = 0;
     pending_stop_ = false;
-    RCLCPP_INFO(this->get_logger(),
+    RCLCPP_WARN(this->get_logger(),
       "[REPEAT] Stop received, cruise aborted");
     state_ = CruiseState::IDLE;
   }
@@ -164,14 +174,14 @@ git commit -m "feat(repeat): add /stop external stop subscription and callback"
 
 ---
 
-### Task 3: Set turning_internal_ flag and loop-back in TURN states
+### Task 3: Set turning flags, consumePendingStop helper, and loop-back in TURN states
 
 **Files:**
 - Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
-- Consumes: `repeat_enabled_`, `loop_count_`, `completed_loops_`, `pending_stop_`, `start_/dest_`, `turning_internal_`
-- Produces: loop-back behavior — `TURN_AT_START` completion either goes to `GO_TO_DEST` (more loops) or `IDLE` (done/stopped).
+- Consumes: `repeat_enabled_`, `loop_count_`, `completed_loops_`, `pending_stop_`, `start_/dest_`, `turning_internal_`, `ignore_next_internal_stop_`
+- Produces: `consumePendingStop()` (stops + returns true if a stop was queued during a turn); loop-back behavior — `TURN_AT_START` completion either goes to `GO_TO_DEST` (more loops) or `IDLE` (done/stopped).
 
 - [ ] **Step 1: Set turning_internal_ in startTurn()**
 
@@ -180,7 +190,10 @@ Modify `startTurn()` (lines 150-161): add `turning_internal_ = true;` at the top
 ```cpp
   void startTurn(CruiseState next_state)
   {
-    turning_internal_ = true;   // ignore self-published /stop=2
+    if (repeat_enabled_) {
+      turning_internal_ = true;
+      ignore_next_internal_stop_ = true;  // consume self-published /stop=2 below
+    }
     auto stop_msg = std_msgs::msg::Int8();
     stop_msg.data = 2;
     stop_pub_->publish(stop_msg);
@@ -193,7 +206,31 @@ Modify `startTurn()` (lines 150-161): add `turning_internal_ = true;` at the top
   }
 ```
 
-- [ ] **Step 2: Clear flag in TURN_AT_DEST completion**
+- [ ] **Step 2: Add `consumePendingStop()` helper**
+
+Insert after `startTurn()`, before `publishTurnCmd()`:
+
+```cpp
+  bool consumePendingStop()
+  {
+    if (!pending_stop_) {
+      return false;
+    }
+    publishZeroCmd();
+    pending_stop_ = false;
+    completed_loops_ = 0;
+    RCLCPP_WARN(this->get_logger(),
+      "[REPEAT] Queued stop executed after turn");
+    state_ = CruiseState::IDLE;
+    return true;
+  }
+```
+
+This is called at BOTH `TURN_AT_DEST` and `TURN_AT_START` completion points so a
+stop requested during either turn stops the robot immediately once that turn
+finishes — no return leg is driven after a stop.
+
+- [ ] **Step 3: Clear flag in TURN_AT_DEST completion**
 
 Modify the `TURN_AT_DEST` case (lines 208-216):
 
@@ -201,7 +238,15 @@ Modify the `TURN_AT_DEST` case (lines 208-216):
     case CruiseState::TURN_AT_DEST:
       if (turnDone()) {
         turning_internal_ = false;
+        ignore_next_internal_stop_ = false;
         publishZeroCmd();
+
+        // A stop requested during this turn stops HERE, not after the
+        // return leg — satisfies "stop immediately once turn completes".
+        if (repeat_enabled_ && consumePendingStop()) {
+          return;
+        }
+
         RCLCPP_INFO(this->get_logger(), "[CRUISE] Turn done, returning to start...");
         sendWaypointAndGo(start_x_, start_y_, CruiseState::RETURN_TO_START);
       } else {
@@ -218,11 +263,17 @@ Replace the `TURN_AT_START` case (lines 228-236):
     case CruiseState::TURN_AT_START:
       if (turnDone()) {
         turning_internal_ = false;
+        ignore_next_internal_stop_ = false;
         publishZeroCmd();
 
         if (!repeat_enabled_) {
           RCLCPP_INFO(this->get_logger(), "[CRUISE] Cruise complete!");
           state_ = CruiseState::IDLE;
+          return;
+        }
+
+        // A stop queued during this turn stops HERE immediately.
+        if (consumePendingStop()) {
           return;
         }
 
@@ -232,10 +283,9 @@ Replace the `TURN_AT_START` case (lines 228-236):
           completed_loops_,
           (loop_count_ > 0 ? std::to_string(loop_count_).c_str() : "inf"));
 
-        if (pending_stop_ || (loop_count_ > 0 && completed_loops_ >= loop_count_)) {
+        if (loop_count_ > 0 && completed_loops_ >= loop_count_) {
           int loops_done = completed_loops_;
           completed_loops_ = 0;
-          pending_stop_ = false;
           RCLCPP_INFO(this->get_logger(),
             "[REPEAT] Cruise complete after %d loops", loops_done);
           state_ = CruiseState::IDLE;
@@ -256,7 +306,7 @@ Replace the `TURN_AT_START` case (lines 228-236):
 > arrival), and `dest_x_/dest_y_` are unchanged, so no `/way_point` republish is
 > needed — just set `state_ = GO_TO_DEST`.
 
-- [ ] **Step 4: Add destination-reached and return logs (repeat only)**
+- [ ] **Step 5: Add destination-reached and return logs (repeat only)**
 
 Add `[REPEAT]`-prefixed lines in the GO_TO_DEST and RETURN_TO_START reach branches:
 
@@ -286,11 +336,11 @@ In `RETURN_TO_START` reach block (line 222-225), add a repeat log:
       }
 ```
 
-- [ ] **Step 5: Include `<string>` for std::to_string**
+- [ ] **Step 6: Include `<string>` for std::to_string**
 
 Add `#include <string>` to the includes at the top of the file.
 
-- [ ] **Step 6: Build**
+- [ ] **Step 7: Build**
 
 ```bash
 cd /home/yu/Codes_rk/cmu_planner
@@ -299,11 +349,11 @@ colcon build --symlink-install --packages-select local_planner
 
 Expected: builds clean.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(repeat): loop-back in TURN_AT_START, turning_internal_ flag, [REPEAT] logs"
+git commit -m "feat(repeat): loop-back in TURN_AT_START, turning_internal_ + ignore flags, [REPEAT] logs"
 ```
 
 ---
@@ -339,6 +389,7 @@ Replace `waypointCallback()` (lines 92-116):
       completed_loops_ = 0;
       pending_stop_ = false;
       turning_internal_ = false;
+      ignore_next_internal_stop_ = false;
       RCLCPP_INFO(this->get_logger(),
         "[REPEAT] New waypoint, loops reset: dest=(%.3f, %.3f), start=(%.3f, %.3f)",
         dest_x_, dest_y_, start_x_, start_y_);
