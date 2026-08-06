@@ -30,6 +30,11 @@ public:
     this->declare_parameter<double>("yaw_kp", 1.5);
     this->declare_parameter<double>("yaw_tolerance", 0.12);
     this->declare_parameter<double>("goal_clear_range", 0.5);
+    this->declare_parameter<bool>("repeat_enabled", false);
+    this->declare_parameter<int>("loop_count", -1);
+
+    repeat_enabled_ = this->get_parameter("repeat_enabled").as_bool();
+    loop_count_ = this->get_parameter("loop_count").as_int();
 
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/state_estimation", 10,
@@ -239,6 +244,12 @@ private:
 
   CruiseState state_;
   bool has_odom_;
+  bool repeat_enabled_;
+  int loop_count_;
+  int completed_loops_ = 0;
+  bool turning_internal_ = false;
+  bool ignore_next_internal_stop_ = false;
+  bool pending_stop_ = false;
   double start_x_, start_y_, dest_x_, dest_y_;
   double current_x_, current_y_, current_yaw_;
   double target_yaw_;
