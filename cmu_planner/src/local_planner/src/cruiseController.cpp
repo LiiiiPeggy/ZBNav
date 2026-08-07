@@ -1,4 +1,5 @@
 #include <cmath>
+#include <string>
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -186,6 +187,10 @@ private:
 
   void startTurn(CruiseState next_state)
   {
+    if (repeat_enabled_) {
+      turning_internal_ = true;
+      ignore_next_internal_stop_ = true;  // consume self-published /stop=2 below
+    }
     auto stop_msg = std_msgs::msg::Int8();
     stop_msg.data = 2;
     stop_pub_->publish(stop_msg);
@@ -195,6 +200,20 @@ private:
     RCLCPP_INFO(this->get_logger(),
       "[CRUISE] Starting 180-degree turn: %s, target_yaw=%.3f (current=%.3f)",
       stateName(next_state), target_yaw_, current_yaw_);
+  }
+
+  bool consumePendingStop()
+  {
+    if (!pending_stop_) {
+      return false;
+    }
+    publishZeroCmd();
+    pending_stop_ = false;
+    completed_loops_ = 0;
+    RCLCPP_WARN(this->get_logger(),
+      "[REPEAT] Queued stop executed after turn");
+    state_ = CruiseState::IDLE;
+    return true;
   }
 
   void publishTurnCmd()
@@ -237,6 +256,10 @@ private:
       dy = current_y_ - dest_y_;
       dist_sq = dx * dx + dy * dy;
       if (dist_sq < goal_clear_range_sq) {
+        if (repeat_enabled_) {
+          RCLCPP_INFO(this->get_logger(),
+            "[REPEAT] Destination reached, loop %d", completed_loops_ + 1);
+        }
         RCLCPP_INFO(this->get_logger(), "[CRUISE] Destination reached, turning...");
         startTurn(CruiseState::TURN_AT_DEST);
       }
@@ -244,7 +267,16 @@ private:
 
     case CruiseState::TURN_AT_DEST:
       if (turnDone()) {
+        turning_internal_ = false;
+        ignore_next_internal_stop_ = false;
         publishZeroCmd();
+
+        // A stop requested during this turn stops HERE, not after the
+        // return leg — satisfies "stop immediately once turn completes".
+        if (repeat_enabled_ && consumePendingStop()) {
+          return;
+        }
+
         RCLCPP_INFO(this->get_logger(), "[CRUISE] Turn done, returning to start...");
         sendWaypointAndGo(start_x_, start_y_, CruiseState::RETURN_TO_START);
       } else {
@@ -257,6 +289,10 @@ private:
       dy = current_y_ - start_y_;
       dist_sq = dx * dx + dy * dy;
       if (dist_sq < goal_clear_range_sq) {
+        if (repeat_enabled_) {
+          RCLCPP_INFO(this->get_logger(),
+            "[REPEAT] Returning to start, loop %d", completed_loops_ + 1);
+        }
         RCLCPP_INFO(this->get_logger(), "[CRUISE] Start reached, turning...");
         startTurn(CruiseState::TURN_AT_START);
       }
@@ -264,9 +300,40 @@ private:
 
     case CruiseState::TURN_AT_START:
       if (turnDone()) {
+        turning_internal_ = false;
+        ignore_next_internal_stop_ = false;
         publishZeroCmd();
-        RCLCPP_INFO(this->get_logger(), "[CRUISE] Cruise complete!");
-        state_ = CruiseState::IDLE;
+
+        if (!repeat_enabled_) {
+          RCLCPP_INFO(this->get_logger(), "[CRUISE] Cruise complete!");
+          state_ = CruiseState::IDLE;
+          return;
+        }
+
+        // A stop queued during this turn stops HERE immediately.
+        if (consumePendingStop()) {
+          return;
+        }
+
+        completed_loops_++;
+        RCLCPP_INFO(this->get_logger(),
+          "[REPEAT][LOOP] loop %d/%s complete",
+          completed_loops_,
+          (loop_count_ > 0 ? std::to_string(loop_count_).c_str() : "inf"));
+
+        if (loop_count_ > 0 && completed_loops_ >= loop_count_) {
+          int loops_done = completed_loops_;
+          completed_loops_ = 0;
+          RCLCPP_INFO(this->get_logger(),
+            "[REPEAT] Cruise complete after %d loops", loops_done);
+          state_ = CruiseState::IDLE;
+        } else {
+          RCLCPP_INFO(this->get_logger(),
+            "[REPEAT][LOOP] loop %d start: (%.3f, %.3f) -> (%.3f, %.3f)",
+            completed_loops_ + 1,
+            start_x_, start_y_, dest_x_, dest_y_);
+          state_ = CruiseState::GO_TO_DEST;
+        }
       } else {
         publishTurnCmd();
       }
