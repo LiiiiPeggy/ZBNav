@@ -44,6 +44,12 @@ public:
       "/way_point_cruise", 10,
       std::bind(&CruiseController::waypointCallback, this, std::placeholders::_1));
 
+    if (this->get_parameter("repeat_enabled").as_bool()) {
+      stop_sub_ = this->create_subscription<std_msgs::msg::Int8>(
+        "/stop", 10,
+        std::bind(&CruiseController::stopCallback, this, std::placeholders::_1));
+    }
+
     waypoint_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>(
       "/way_point", 10);
     stop_pub_ = this->create_publisher<std_msgs::msg::Int8>(
@@ -118,6 +124,32 @@ private:
       "[CRUISE][INPUT] start=(%.3f, %.3f), destination=(%.3f, %.3f)",
       start_x_, start_y_, dest_x_, dest_y_);
     sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
+  }
+
+  void stopCallback(const std_msgs::msg::Int8::ConstSharedPtr msg)
+  {
+    if (msg->data < 2) return;
+
+    // Consume the node's own /stop=2 published at startTurn().
+    // Without this, the self-publish would be treated as an external
+    // stop and every turn would immediately abort the cruise.
+    if (ignore_next_internal_stop_) {
+      ignore_next_internal_stop_ = false;
+      return;
+    }
+
+    if (turning_internal_) {
+      pending_stop_ = true;
+      RCLCPP_WARN(this->get_logger(),
+        "[REPEAT] External stop queued during turn");
+      return;
+    }
+    publishZeroCmd();
+    completed_loops_ = 0;
+    pending_stop_ = false;
+    RCLCPP_WARN(this->get_logger(),
+      "[REPEAT] Stop received, cruise aborted");
+    state_ = CruiseState::IDLE;
   }
 
   void publishZeroCmd()
@@ -256,6 +288,7 @@ private:
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr waypoint_sub_;
+  rclcpp::Subscription<std_msgs::msg::Int8>::SharedPtr stop_sub_;
   rclcpp::Publisher<geometry_msgs::msg::PointStamped>::SharedPtr waypoint_pub_;
   rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr stop_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
