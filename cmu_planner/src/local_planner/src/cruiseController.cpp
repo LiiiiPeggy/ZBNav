@@ -109,6 +109,23 @@ private:
       return;
     }
 
+    // Repeat mode: accept new waypoint even while cruising (retarget + reset)
+    if (repeat_enabled_ && state_ != CruiseState::IDLE) {
+      dest_x_ = msg->point.x;
+      dest_y_ = msg->point.y;
+      start_x_ = current_x_;
+      start_y_ = current_y_;
+      completed_loops_ = 0;
+      pending_stop_ = false;
+      turning_internal_ = false;
+      ignore_next_internal_stop_ = false;
+      RCLCPP_INFO(this->get_logger(),
+        "[REPEAT] New waypoint, loops reset: dest=(%.3f, %.3f), start=(%.3f, %.3f)",
+        dest_x_, dest_y_, start_x_, start_y_);
+      sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
+      return;
+    }
+
     if (state_ != CruiseState::IDLE) {
       RCLCPP_WARN(this->get_logger(),
         "Already cruising, ignoring new waypoint");
