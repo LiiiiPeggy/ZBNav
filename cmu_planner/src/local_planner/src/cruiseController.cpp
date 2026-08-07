@@ -118,7 +118,6 @@ private:
       completed_loops_ = 0;
       pending_stop_ = false;
       turning_internal_ = false;
-      ignore_next_internal_stop_ = false;
       RCLCPP_INFO(this->get_logger(),
         "[REPEAT] New waypoint, loops reset: dest=(%.3f, %.3f), start=(%.3f, %.3f)",
         dest_x_, dest_y_, start_x_, start_y_);
