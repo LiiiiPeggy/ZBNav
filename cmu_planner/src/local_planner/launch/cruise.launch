@@ -4,6 +4,7 @@
   <arg name="yaw_kp" default="1.5"/>
   <arg name="yaw_tolerance" default="0.12"/>
   <arg name="goal_clear_range" default="0.5"/>
+  <arg name="turn_angle" default="180.0"/>
   <arg name="repeat_enabled" default="false"/>
   <arg name="loop_count" default="-1"/>
 
@@ -12,6 +13,7 @@
     <param name="yaw_kp" value="$(var yaw_kp)" />
     <param name="yaw_tolerance" value="$(var yaw_tolerance)" />
     <param name="goal_clear_range" value="$(var goal_clear_range)" />
+    <param name="turn_angle" value="$(var turn_angle)" />
     <param name="repeat_enabled" value="$(var repeat_enabled)" />
     <param name="loop_count" value="$(var loop_count)" />
   </node>

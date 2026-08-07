@@ -31,9 +31,11 @@ public:
     this->declare_parameter<double>("yaw_kp", 1.5);
     this->declare_parameter<double>("yaw_tolerance", 0.12);
     this->declare_parameter<double>("goal_clear_range", 0.5);
+    this->declare_parameter<double>("turn_angle", 180.0);
     this->declare_parameter<bool>("repeat_enabled", false);
     this->declare_parameter<int>("loop_count", -1);
 
+    turn_angle_ = this->get_parameter("turn_angle").as_double();
     repeat_enabled_ = this->get_parameter("repeat_enabled").as_bool();
     loop_count_ = this->get_parameter("loop_count").as_int();
 
@@ -218,11 +220,11 @@ private:
     stop_msg.data = 2;
     stop_pub_->publish(stop_msg);
 
-    target_yaw_ = normalizeAngle(current_yaw_ + M_PI);
+    target_yaw_ = normalizeAngle(current_yaw_ + turn_angle_ * M_PI / 180.0);
     state_ = next_state;
     RCLCPP_INFO(this->get_logger(),
-      "[CRUISE] Starting 180-degree turn: %s, target_yaw=%.3f (current=%.3f)",
-      stateName(next_state), target_yaw_, current_yaw_);
+      "[CRUISE] Starting %.0f-degree turn: %s, target_yaw=%.3f (current=%.3f)",
+      turn_angle_, stateName(next_state), target_yaw_, current_yaw_);
   }
 
   bool consumePendingStop()
@@ -369,6 +371,7 @@ private:
 
   CruiseState state_;
   bool has_odom_;
+  double turn_angle_;
   bool repeat_enabled_;
   int loop_count_;
   int completed_loops_ = 0;

@@ -17,6 +17,7 @@ def generate_launch_description():
   rvizWaypointTopic = LaunchConfiguration('rvizWaypointTopic')
   repeat_enabled = LaunchConfiguration('repeat_enabled')
   loop_count = LaunchConfiguration('loop_count')
+  turn_angle = LaunchConfiguration('turn_angle')
 
   declare_cameraOffsetZ = DeclareLaunchArgument('cameraOffsetZ', default_value='0.0', description='')
   declare_vehicleX = DeclareLaunchArgument('vehicleX', default_value='0.0', description='')
@@ -26,6 +27,7 @@ def generate_launch_description():
   declare_rvizWaypointTopic = DeclareLaunchArgument('rvizWaypointTopic', default_value='/way_point', description='Waypoint topic published by RViz')
   declare_repeat_enabled = DeclareLaunchArgument('repeat_enabled', default_value='false', description='Enable repeat cruise mode')
   declare_loop_count = DeclareLaunchArgument('loop_count', default_value='-1', description='Round-trips (-1=infinite)')
+  declare_turn_angle = DeclareLaunchArgument('turn_angle', default_value='180.0', description='Turn angle at each U-turn (deg)')
 
   start_local_planner = IncludeLaunchDescription(
     FrontendLaunchDescriptionSource(os.path.join(
@@ -80,6 +82,7 @@ def generate_launch_description():
     launch_arguments={
       'repeat_enabled': repeat_enabled,
       'loop_count': loop_count,
+      'turn_angle': turn_angle,
     }.items()
   )
 
@@ -112,6 +115,7 @@ def generate_launch_description():
   ld.add_action(declare_rvizWaypointTopic)
   ld.add_action(declare_repeat_enabled)
   ld.add_action(declare_loop_count)
+  ld.add_action(declare_turn_angle)
 
   ld.add_action(start_local_planner)
   ld.add_action(start_cruise)
