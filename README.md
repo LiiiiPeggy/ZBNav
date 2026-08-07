@@ -106,7 +106,9 @@ Convenience scripts live in the workspace root (`1.sh`) and `cmu_planner/`:
 | `cmu_planner/1build.sh` | Build cmu_planner only |
 | `cmu_planner/2run.sh` | Launch main planner stack (no cruise) |
 | `cmu_planner/3cruise.sh` | Launch planner **with cruise**, output filtered to `[CRUISE]` lines |
-| `cmu_planner/4debug.sh` | Launch planner with cruise, full output (debug) |
+| `cmu_planner/4debug_cruise.sh` | Launch planner with cruise, full output (debug) |
+| `cmu_planner/5repeat.sh` | Launch planner with **repeat cruise**, filtered to `[REPEAT]`/`[CRUISE]`; `./5repeat.sh [N]` = N round-trips, default infinite |
+| `cmu_planner/6debug_repeat.sh` | Launch planner with repeat cruise, full output (debug) |
 
 ## Cruise Patrol (往返巡航)
 
@@ -155,6 +157,43 @@ Structured log output (filter with `grep CRUISE`):
 [CRUISE][WAYPOINT] phase=RETURN_TO_START, publish /way_point: x=1.250, y=2.430
 [CRUISE] Start reached, turning...
 [CRUISE] Cruise complete!
+```
+
+## Repeat Cruise (重复巡航)
+
+The same `cruiseController` node, with `repeat_enabled:=true`, patrols
+back-and-forth: each round-trip is go → turn 180° → return → turn 180°,
+then loop again. `repeat_enabled=false` (default) keeps the single-pass
+behavior above — `3cruise.sh` unaffected.
+
+Launch:
+```bash
+cd cmu_planner && ./5repeat.sh          # infinite loops
+cd cmu_planner && ./5repeat.sh 3        # exactly 3 round-trips
+```
+
+| Param | Default | Meaning |
+|-------|---------|---------|
+| `repeat_enabled` | false | Enable repeat mode |
+| `loop_count` | -1 | Round-trips: `-1` = infinite, `N` = N round-trips, `1` = one; invalid (0 or < -1) clamped to 1 |
+
+**Stop during repeat**: publish `/stop` with `data=2`
+(`ros2 topic pub /stop std_msgs/msg/Int8 "{data: 2}" --once`). If mid-turn it
+is queued and applied right after the turn; otherwise it aborts immediately.
+The node's own `/stop=2` during its turns is ignored via an internal flag.
+
+**Retarget mid-cruise** (repeat mode): clicking RViz while cruising replaces
+the destination, re-anchors start at the current pose, resets the loop count,
+and restarts from `GO_TO_DEST`.
+
+Repeat log output (filter with `grep REPEAT`):
+```
+[REPEAT][LOOP] loop 1/3 start: (1.250, 2.430) -> (8.100, -3.200)
+[REPEAT] Destination reached, loop 1
+[REPEAT] Returning to start, loop 1
+[REPEAT][LOOP] loop 1/3 complete
+[REPEAT][LOOP] loop 2/3 start: ...
+[REPEAT] Cruise complete after 3 loops
 ```
 
 ## Data Flow Check

@@ -39,7 +39,9 @@ colcon build --symlink-install
 > is installed (its gazebo deps are `QUIET`/optional); launch files, rviz configs and
 > `cruiseController` always build. Velodyne simulation packages were removed.
 > Convenience scripts: `1build.sh` (build), `2run.sh` (planner only), `3cruise.sh`
-> (planner + cruise, `[CRUISE]`-filtered output), `4debug.sh` (planner + cruise, full output).
+> (planner + cruise, `[CRUISE]`-filtered), `4debug_cruise.sh` (planner + cruise, full),
+> `5repeat.sh [N]` (planner + repeat cruise, N round-trips default infinite,
+> `[REPEAT]`/`[CRUISE]`-filtered), `6debug_repeat.sh` (planner + repeat cruise, full).
 
 Each workspace is an **independent colcon workspace** — source them separately with `source install/setup.bash`.
 
@@ -65,7 +67,7 @@ Two interchangeable SLAM backends, both remap to the same CMU planner topics. Wh
   - `super_lio` — ESKF-based LIO with 18-D state (R, p, v, bg, ba, g). OctVoxMap for scan-to-map registration. State machine: `stateWaitKFInit` → `stateWaitMapInit` → `stateProcess`. Nodes: `super_lio_node` (online SLAM), `relocation_node` (global localization against pre-built map)
   - `odin_ros_driver` — Odin 深度传感器 ROS 2 驱动，自带 SLAM 里程计和建图。配置: `config/control_command.yaml` (传感器参数、数据开关、重定位)
 - **`cmu_planner`** — Path planning and terrain analysis stack (CMU):
-  - `local_planner` — local path planning + path following; also hosts `cruiseController` (patrol round-trip: go → turn 180° → return → turn 180°, yaw-closed-loop turning via `/state_estimation`)
+  - `local_planner` — local path planning + path following; also hosts `cruiseController` (patrol: go → turn 180° → return → turn 180°; yaw-closed-loop turning via `/state_estimation`). Repeat mode via `repeat_enabled`/`loop_count` params: loops back-and-forth N round-trips (-1 = infinite), external `/stop=2` aborts (self-published stops ignored via `ignore_next_internal_stop_`, queued stops consumed at both turn completions via `consumePendingStop()`), mid-cruise retarget resets loops
   - `terrain_analysis` / `terrain_analysis_ext` — terrain traversability analysis
   - `sensor_scan_generation` — synthetic scan generation for planning
   - `waypoint_example` / `waypoint_rviz_plugin` — waypoint following
@@ -114,7 +116,7 @@ SLAM 输出通过 launch 文件 remap 统一对接 CMU 规划栈，**无需 brid
 | `/cmd_vel` | `pathFollower` (travel) or `cruiseController` (turns) | robot / `vehicle_simulator` |
 | `/way_point` | `waypoint_rviz_plugin`, `waypoint_example`, `cruiseController` | `local_planner` |
 | `/way_point_cruise` | RViz waypoint tool (when `enableCruise:=true`) | `cruiseController` |
-| `/stop` | `cruiseController` | `pathFollower` (data 2 = full stop, cruise takes over `/cmd_vel`) |
+| `/stop` | `cruiseController` | `pathFollower` (data 2 = full stop, cruise takes over `/cmd_vel`); `cruiseController` also subscribes in repeat mode (external stop) |
 | `/joy` | `joy_node` | `local_planner`, `terrain_analysis`, `terrain_analysis_ext`, `pathFollower` |
 
 ### Key build-time flags
