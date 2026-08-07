@@ -15,6 +15,8 @@ def generate_launch_description():
   checkTerrainConn = LaunchConfiguration('checkTerrainConn')
   enableCruise = LaunchConfiguration('enableCruise')
   rvizWaypointTopic = LaunchConfiguration('rvizWaypointTopic')
+  repeat_enabled = LaunchConfiguration('repeat_enabled')
+  loop_count = LaunchConfiguration('loop_count')
 
   declare_cameraOffsetZ = DeclareLaunchArgument('cameraOffsetZ', default_value='0.0', description='')
   declare_vehicleX = DeclareLaunchArgument('vehicleX', default_value='0.0', description='')
@@ -22,7 +24,9 @@ def generate_launch_description():
   declare_checkTerrainConn = DeclareLaunchArgument('checkTerrainConn', default_value='true', description='')
   declare_enableCruise = DeclareLaunchArgument('enableCruise', default_value='false', description='Start cruise controller')
   declare_rvizWaypointTopic = DeclareLaunchArgument('rvizWaypointTopic', default_value='/way_point', description='Waypoint topic published by RViz')
-  
+  declare_repeat_enabled = DeclareLaunchArgument('repeat_enabled', default_value='false', description='Enable repeat cruise mode')
+  declare_loop_count = DeclareLaunchArgument('loop_count', default_value='-1', description='Round-trips (-1=infinite)')
+
   start_local_planner = IncludeLaunchDescription(
     FrontendLaunchDescriptionSource(os.path.join(
       get_package_share_directory('local_planner'), 'launch', 'local_planner.launch')
@@ -72,7 +76,11 @@ def generate_launch_description():
     FrontendLaunchDescriptionSource(os.path.join(
       get_package_share_directory('local_planner'), 'launch', 'cruise.launch')
     ),
-    condition=IfCondition(enableCruise)
+    condition=IfCondition(enableCruise),
+    launch_arguments={
+      'repeat_enabled': repeat_enabled,
+      'loop_count': loop_count,
+    }.items()
   )
 
   rviz_config_file = os.path.join(get_package_share_directory('vehicle_simulator'), 'rviz', 'vehicle_simulator.rviz')
@@ -102,6 +110,8 @@ def generate_launch_description():
   ld.add_action(declare_checkTerrainConn)
   ld.add_action(declare_enableCruise)
   ld.add_action(declare_rvizWaypointTopic)
+  ld.add_action(declare_repeat_enabled)
+  ld.add_action(declare_loop_count)
 
   ld.add_action(start_local_planner)
   ld.add_action(start_cruise)
