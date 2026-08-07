@@ -37,6 +37,13 @@ public:
     repeat_enabled_ = this->get_parameter("repeat_enabled").as_bool();
     loop_count_ = this->get_parameter("loop_count").as_int();
 
+    // 防呆：loop_count 只接受 -1（无限）或正整数（趟数）
+    if (loop_count_ == 0 || loop_count_ < -1) {
+      RCLCPP_WARN(this->get_logger(),
+        "[REPEAT] Invalid loop_count=%d, using 1", loop_count_);
+      loop_count_ = 1;
+    }
+
     odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/state_estimation", 10,
       std::bind(&CruiseController::odomCallback, this, std::placeholders::_1));
@@ -348,7 +355,10 @@ private:
             "[REPEAT][LOOP] loop %d start: (%.3f, %.3f) -> (%.3f, %.3f)",
             completed_loops_ + 1,
             start_x_, start_y_, dest_x_, dest_y_);
-          state_ = CruiseState::GO_TO_DEST;
+          // 必须重新调用 sendWaypointAndGo()：掉头开始时发布了 /stop=2，
+          // pathFollower 的 safetyStop 保持 2 会完全停止发布 /cmd_vel；
+          // 此函数会重发 /way_point 并发布 /stop=0 恢复 pathFollower 控制。
+          sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
         }
       } else {
         publishTurnCmd();
