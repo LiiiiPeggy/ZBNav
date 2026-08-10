@@ -96,6 +96,31 @@ source SLAM/install/setup.bash && ros2 launch odin_ros_driver odin1_ros2.launch.
 source cmu_planner/install/setup.bash && ros2 launch vehicle_simulator system_real_robot.launch
 ```
 
+### Odin map save & relocalization
+
+Odin has three algorithm modes via `custom_map_mode` in
+`SLAM/src/odin_ros_driver/config/control_command.yaml`:
+
+| Mode | Meaning |
+|------|---------|
+| `0` | Odometry only (no full mapping) |
+| `1` | SLAM: localize + map |
+| `2` | Relocalization: locate against a saved map (requires `relocalization_map_abs_path`) |
+
+**Save a map** (SLAM mode `1`): after driving the scene, run
+```bash
+cd SLAM/src/odin_ros_driver && ./set_param.sh save_map 1
+```
+The `.bin` map is transferred from the device to
+`map/{map_save_time}/map_*.bin` (or `mapping_result_dest_dir` /
+`mapping_result_file_name` if set). Note this map is geometric only — it
+does **not** contain RGB color; it is for relocalization, not visualization.
+
+**Relocalize** (mode `2`): set `relocalization_map_abs_path` to the saved
+`.bin`, then relaunch the driver. On success the driver outputs the
+`map → odom` TF, so `/state_estimation` and `/registered_scan` are in the
+map frame.
+
 ### Option C: Odin + one-click scripts
 
 Convenience scripts live in the workspace root (`1.sh`) and `cmu_planner/`:
@@ -107,7 +132,7 @@ Convenience scripts live in the workspace root (`1.sh`) and `cmu_planner/`:
 | `cmu_planner/2run.sh` | Launch main planner stack (no cruise) |
 | `cmu_planner/3cruise.sh` | Launch planner **with cruise**, output filtered to `[CRUISE]` lines |
 | `cmu_planner/4debug_cruise.sh` | Launch planner with cruise, full output (debug) |
-| `cmu_planner/5repeat.sh` | Launch planner with **repeat cruise**, filtered to `[REPEAT]`/`[CRUISE]`; `./5repeat.sh [N]` = N round-trips, default infinite |
+| `cmu_planner/5repeat180.sh` | Launch planner with **repeat cruise**, filtered to `[REPEAT]`/`[CRUISE]`; `./5repeat180.sh [N]` = N round-trips, default infinite (turn_angle=180°) |
 | `cmu_planner/6debug_repeat.sh` | Launch planner with repeat cruise, full output (debug) |
 
 ## Cruise Patrol (往返巡航)
@@ -131,7 +156,7 @@ place → return to start → turn 180° → stop.
 
 Launch:
 ```bash
-cd cmu_planner && ./3cruise.sh          # or ./4debug.sh for full output
+cd cmu_planner && ./3cruise.sh          # or ./4debug_cruise.sh for full output
 ```
 
 Parameters (override on command line):
@@ -168,8 +193,8 @@ behavior above — `3cruise.sh` unaffected.
 
 Launch:
 ```bash
-cd cmu_planner && ./5repeat.sh          # infinite loops
-cd cmu_planner && ./5repeat.sh 3        # exactly 3 round-trips
+cd cmu_planner && ./5repeat180.sh       # infinite loops
+cd cmu_planner && ./5repeat180.sh 3     # exactly 3 round-trips
 ```
 
 | Param | Default | Meaning |

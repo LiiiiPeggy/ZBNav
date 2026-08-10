@@ -67,7 +67,7 @@ Two interchangeable SLAM backends, both remap to the same CMU planner topics. Wh
 - **`SLAM`** — Core SLAM system:
   - `basic` — shared library: Eigen type aliases, manifold math (SO3/SE3/S2), ring buffers (must be built first)
   - `super_lio` — ESKF-based LIO with 18-D state (R, p, v, bg, ba, g). OctVoxMap for scan-to-map registration. State machine: `stateWaitKFInit` → `stateWaitMapInit` → `stateProcess`. Nodes: `super_lio_node` (online SLAM), `relocation_node` (global localization against pre-built map)
-  - `odin_ros_driver` — Odin 深度传感器 ROS 2 驱动，自带 SLAM 里程计和建图。配置: `config/control_command.yaml` (传感器参数、数据开关、重定位)
+  - `odin_ros_driver` — Odin 深度传感器 ROS 2 驱动，自带 SLAM 里程计和建图。配置: `config/control_command.yaml` (传感器参数、数据开关、重定位)。`custom_map_mode`: 0=里程计, 1=SLAM 建图, 2=重定位（需 `relocalization_map_abs_path` 指向 `.bin` 地图）
 - **`cmu_planner`** — Path planning and terrain analysis stack (CMU):
   - `local_planner` — local path planning + path following; also hosts `cruiseController` (patrol: go → turn 180° → return → turn 180°; yaw-closed-loop turning via `/state_estimation`). Repeat mode via `repeat_enabled`/`loop_count` params: loops back-and-forth N round-trips (-1 = infinite), external `/stop=2` aborts (self-published stops ignored via `ignore_next_internal_stop_`, queued stops consumed at both turn completions via `consumePendingStop()`), mid-cruise retarget resets loops
   - `terrain_analysis` / `terrain_analysis_ext` — terrain traversability analysis
