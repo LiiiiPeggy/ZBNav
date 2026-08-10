@@ -50,6 +50,7 @@ double maxYawRate = 45.0;
 double maxSpeed = 1.0;
 double maxAccel = 1.0;
 double minMoveSpeed = 0.32;
+double minYawRate = 0.32;
 double switchTimeThre = 1.0;
 double dirDiffThre = 0.1;
 double stopDisThre = 0.2;
@@ -201,6 +202,7 @@ int main(int argc, char** argv)
   nh->declare_parameter<double>("maxSpeed", maxSpeed);
   nh->declare_parameter<double>("maxAccel", maxAccel);
   nh->declare_parameter<double>("minMoveSpeed", minMoveSpeed);
+  nh->declare_parameter<double>("minYawRate", minYawRate);
   nh->declare_parameter<double>("switchTimeThre", switchTimeThre);
   nh->declare_parameter<double>("dirDiffThre", dirDiffThre);
   nh->declare_parameter<double>("stopDisThre", stopDisThre);
@@ -231,6 +233,7 @@ int main(int argc, char** argv)
   nh->get_parameter("maxSpeed", maxSpeed);
   nh->get_parameter("maxAccel", maxAccel);
   nh->get_parameter("minMoveSpeed", minMoveSpeed);
+  nh->get_parameter("minYawRate", minYawRate);
   nh->get_parameter("switchTimeThre", switchTimeThre);
   nh->get_parameter("dirDiffThre", dirDiffThre);
   nh->get_parameter("stopDisThre", stopDisThre);
@@ -389,6 +392,19 @@ int main(int argc, char** argv)
           }
 
           cmd_vel.angular.z = vehicleYawRate;
+
+          // ################################
+          // C++: compensate robot minimum effective yaw rate
+          // ################################
+          // 底层角速度死区：|angular.z| <= minYawRate 时实际不转。
+          // 微调转向量低于死区时机器人不动，导致路径跟踪偏航。
+          // 将非零角速度提升到死区边界，保留符号；零保持零。
+          if (fabs(cmd_vel.angular.z) < minYawRate &&
+              fabs(cmd_vel.angular.z) > 0.0) {
+            cmd_vel.angular.z =
+              (cmd_vel.angular.z > 0.0) ? minYawRate : -minYawRate;
+          }
+
           pubSpeed->publish(cmd_vel);
         }
 
