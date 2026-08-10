@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="max_yaw_rate" default="45.0"/>
+  <arg name="min_yaw_rate" default="0.32"/>
   <arg name="yaw_kp" default="1.5"/>
   <arg name="yaw_tolerance" default="0.12"/>
   <arg name="goal_clear_range" default="0.5"/>
@@ -10,6 +11,7 @@
 
   <node pkg="local_planner" exec="cruiseController" name="cruise_controller" output="screen">
     <param name="max_yaw_rate" value="$(var max_yaw_rate)" />
+    <param name="min_yaw_rate" value="$(var min_yaw_rate)" />
     <param name="yaw_kp" value="$(var yaw_kp)" />
     <param name="yaw_tolerance" value="$(var yaw_tolerance)" />
     <param name="goal_clear_range" value="$(var goal_clear_range)" />

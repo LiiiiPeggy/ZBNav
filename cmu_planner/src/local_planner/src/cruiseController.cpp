@@ -28,6 +28,7 @@ public:
     target_yaw_(0.0)
   {
     this->declare_parameter<double>("max_yaw_rate", 45.0);
+    this->declare_parameter<double>("min_yaw_rate", 0.32);
     this->declare_parameter<double>("yaw_kp", 1.5);
     this->declare_parameter<double>("yaw_tolerance", 0.12);
     this->declare_parameter<double>("goal_clear_range", 0.5);
@@ -36,6 +37,7 @@ public:
     this->declare_parameter<int>("loop_count", -1);
 
     turn_angle_ = this->get_parameter("turn_angle").as_double();
+    min_yaw_rate_ = this->get_parameter("min_yaw_rate").as_double();
     repeat_enabled_ = this->get_parameter("repeat_enabled").as_bool();
     loop_count_ = this->get_parameter("loop_count").as_int();
 
@@ -253,6 +255,16 @@ private:
     if (wz > max_yaw_rate) wz = max_yaw_rate;
     if (wz < -max_yaw_rate) wz = -max_yaw_rate;
 
+    // ################################
+    // C++: compensate robot minimum effective yaw rate
+    // ################################
+    // 底层角速度死区：|angular.z| <= min_yaw_rate 时实际不转。
+    // P 控制收敛到死区以内会停转，导致掉头永远到不了 yaw_tolerance。
+    // 将非零角速度提升到死区边界，保留符号。
+    if (fabs(wz) < min_yaw_rate_ && fabs(wz) > 0.0) {
+      wz = (wz > 0.0) ? min_yaw_rate_ : -min_yaw_rate_;
+    }
+
     geometry_msgs::msg::Twist cmd;
     cmd.linear.x = 0.0;
     cmd.angular.z = wz;
@@ -372,6 +384,7 @@ private:
   CruiseState state_;
   bool has_odom_;
   double turn_angle_;
+  double min_yaw_rate_;
   bool repeat_enabled_;
   int loop_count_;
   int completed_loops_ = 0;
