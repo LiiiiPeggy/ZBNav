@@ -119,6 +119,11 @@ After cruising starts, `/multi_waypoint_add` is ignored:
 - Current executing waypoint highlighted (distinct color/size).
 YAML mode publishes full route at startup; RViz mode publishes incrementally during
 collection. Both republish on any change.
+- **QoS: `rclcpp::QoS(10).reliable().transient_local()`** — the last MarkerArray is
+  latched so an RViz2 that starts after the node still sees the YAML route.
+  (RViz's default MarkerArray subscription with transient-local compatibility
+  receives the latched message; without transient-local a late-starting RViz would
+  miss the already-published route.)
 
 **R6 — Wait param is a node param, not YAML-only.** `default_wait_time` is a
 `cruiseController` ROS param (default 2.0 s) passed via `cruise.launch` and
@@ -140,9 +145,12 @@ multi_cruise:
 ```
 
 Per-waypoint optional overrides: `turn_angle` (default 0.0), `wait_time`
-(default = `default_wait_time`; `0.0` = no wait). File lives at
-`cmu_planner/src/local_planner/config/multi_route.yaml` (default value of
-`multi_route_file` param).
+(default = `default_wait_time`; `0.0` = no wait). Source file lives at
+`cmu_planner/src/local_planner/config/multi_route.yaml`; the **installed** copy is
+`share/local_planner/config/multi_route.yaml`. The `multi_route_file` param default
+is resolved at runtime via `ament_index_cpp::get_package_share_directory("local_planner")
++ "/config/multi_route.yaml"` (robust to both `colcon build` and installed deploy).
+`CMakeLists.txt` must `install(DIRECTORY config DESTINATION share/${PROJECT_NAME})`.
 
 **R8 — Waypoint struct.**
 
@@ -158,20 +166,40 @@ struct Waypoint {
 
 ```
 IDLE
- ↓ (yaml: loadYaml→publishMarkers)  (rviz: COLLECTING_WAYPOINTS→/multi_start)
-GO_TO_WAYPOINT            # drive to waypoints_[waypoint_index_]
+ ↓ multi_enabled=true at startup → WAIT_LOCALIZATION
+WAIT_LOCALIZATION         # wait for /state_estimation + odom→map TF to be ready
+ ↓ TF ready && odom received
+ (yaml: loadYaml→publishMarkers)  (rviz: COLLECTING_WAYPOINTS→/multi_start)
+GO_TO_WAYPOINT            # drive to active_goal_odom_ (from waypoints_[waypoint_index_])
  ↓ reached
 TURN_AT_WAYPOINT          # only if currentWaypoint.turn_angle != 0
  ↓ turn done
 WAIT_AT_WAYPOINT          # skip if wait_time <= 0
  ↓ (now - wait_start_time_) >= wait_time
-advanceWaypoint()         # waypoint_index_++; if past last: completed_loops_++, index=0
+advanceWaypoint()         # waypoint_index_++; if past last: index=0, closing_loop_=true
  ↓
 GO_TO_WAYPOINT
 ```
 
-After the last waypoint: `completed_loops_++`. If `loop_count==-1 || completed_loops_ < loop_count`
-→ back to WP0; else → `IDLE` + `publishZeroCmd()`.
+**WAIT_LOCALIZATION gate:** when `multi_enabled=true`, the node starts in
+`WAIT_LOCALIZATION` and does NOT proceed until both are true:
+- at least one `/state_estimation` message received (`has_odom_`), AND
+- `tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)` succeeds.
+Until then the robot stays still; a log line repeats throttled
+(`[MULTI] Waiting for localization/TF...`). This guarantees `active_goal_odom_`
+conversion has a valid `odom→map` transform before the first waypoint is sent.
+Both YAML load and RViz collection begin only after this gate.
+
+**Loop-count definition (revised):** one round is NOT counted when the robot
+reaches the last waypoint — it is counted when the robot **closes the loop back
+to WP0** (WPN → WP0) and arrives at WP0. So:
+
+- `closing_loop_` flag is set true when `advanceWaypoint()` wraps from the last
+  waypoint back to index 0.
+- On arriving at WP0 **with `closing_loop_ == true`**: `completed_loops_++`,
+  clear `closing_loop_`. If `loop_count==-1 || completed_loops_ < loop_count` →
+  continue cruising from WP0; else → `IDLE` + `publishZeroCmd()` (stops at WP0).
+- Arriving at WP0 normally (first cruise start) does NOT count a loop.
 
 YAML mode never enters `COLLECTING_WAYPOINTS`; RViz mode skips YAML load.
 **Both modes validate `waypoints_.size() >= 2` before starting cruise** — YAML mode
@@ -181,13 +209,24 @@ at startup (error log + stay IDLE if the file has <2 points), RViz mode in
 **R10 — Arrival sequence (fixed order).**
 
 ```
-GO_TO_WAYPOINT → arrive → stop (publishZeroCmd)
+GO_TO_WAYPOINT → arrive → publish /stop=2 (cruiseController takes /cmd_vel)
+→ publishZeroCmd()
 → TURN_AT_WAYPOINT (if turn_angle != 0)
 → WAIT_AT_WAYPOINT (wait_time, via time-diff, no sleep; /stop responsive)
 → sendWaypointAndGo(next /way_point) + /stop=0 → pathFollower resumes
 ```
 
+**On EVERY waypoint arrival, BEFORE any wait/turn, cruiseController publishes
+`/stop=2` to seize `/cmd_vel` control** (pathFollower fully stops publishing),
+then `publishZeroCmd()` to hold the robot still. The `/stop=2` remains in effect
+through the turn and the wait; it is released only when the next waypoint is
+published via `sendWaypointAndGo()` (which sends `/stop=0`). This guarantees
+pathFollower cannot inject stray commands during turns or waits.
+
 No non-zero motion commands are published to pathFollower during the wait.
+The internal `/stop=2` self-publish is consumed via the same
+`turning_internal_` / `ignore_next_internal_stop_` mechanism (R11), so it is
+never mistaken for an external stop.
 
 **R11 — Control authority (unchanged mechanism).**
 - Normal cruise: `pathFollower → /cmd_vel`.
@@ -201,14 +240,31 @@ MULTI mode MUST subscribe `/stop` (like REPEAT) and reuse/generalize
 `turning_internal_` / `ignore_next_internal_stop_` / `pending_stop_` so the node's
 own internal `/stop=2` is not mistaken for an external stop.
 
-**R12 — Coordinate separation.** `waypoints_` are stored in map frame. The current
-waypoint is converted to the planner's coordinate frame when sent via `/way_point`.
-RViz-added points never bypass the state machine to `localPlanner`.
+**R12 — Coordinate separation & odom-frame goal.**
+
+- `waypoints_` are stored in **map frame** (RViz fixed frame = map; YAML coords are
+  map coords).
+- The current waypoint is converted to the **odom frame** for the arrival check and
+  for the `/way_point` published to `localPlanner`:
+  - `cruiseController` holds a `tf2_ros::Buffer` + `tf2_ros::TransformListener`
+    and caches `tf2::lookupTransform("odom", "map", timepoint)`.
+  - On entering `GO_TO_WAYPOINT`, transform `waypoints_[i]` (map) → odom once and
+    cache it as `active_goal_odom_` (a `geometry_msgs::msg::PointStamped` or
+    `double gx_odom_, gy_odom_`).
+  - **Arrival check** compares the robot's current position from
+    `/state_estimation` (which is in odom frame) against `active_goal_odom_`
+    using `goal_clear_range`. No per-tick `lookupTransform` — only one lookup per
+    waypoint transition.
+- RViz-added points never bypass the state machine to `localPlanner`.
+- New dependency on `tf2` / `tf2_ros` / `tf2_geometry_msgs` for
+  `cruiseController` (in addition to R13).
 
 **R13 — New dependencies.** `local_planner` adds:
 - `yaml-cpp` (parse `multi_route.yaml`)
 - `visualization_msgs` (MarkerArray)
 - `std_srvs` (`Trigger` service)
+- `tf2` / `tf2_ros` / `tf2_geometry_msgs` (for `cruiseController`'s odom→map
+  transform, R12)
 
 in both `CMakeLists.txt` (`find_package` + `ament_target_dependencies`) and
 `package.xml` (`<depend>`).
@@ -217,16 +273,20 @@ in both `CMakeLists.txt` (`find_package` + `ament_target_dependencies`) and
 - MarkerArray display subscribing `/multi_waypoints`.
 - `rviz_default_plugins/PublishPoint` tool with topic `/multi_waypoint_add`
   (for RViz mode).
+- The MarkerArray display's QoS must be compatible with the publisher's
+  `reliable().transient_local()` — RViz2's default MarkerArray display uses
+  a transient-local compatible profile, so it receives the latched route even
+  if RViz starts after the node.
 
 ## File Changes
 
 | File | Action | Details |
 |------|--------|---------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | `Waypoint` struct; `waypoints_`, `waypoint_index_`, `completed_loops_`; MULTI states (`COLLECTING_WAYPOINTS`, `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`); `/multi_waypoint_add` sub; `/multi_start` service; `/multi_waypoints` MarkerArray pub; `loadYaml()`; `publishMarkers()`; `advanceWaypoint()`; params (`multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time`); `[MULTI]` logs. |
+| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | `Waypoint` struct; `waypoints_`, `waypoint_index_`, `completed_loops_`, `closing_loop_`, `active_goal_odom_`; MULTI states (`WAIT_LOCALIZATION`, `COLLECTING_WAYPOINTS`, `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`); `/multi_waypoint_add` sub; `/multi_start` service; `/multi_waypoints` MarkerArray pub (reliable+transient_local); `loadYaml()`; `publishMarkers()`; `advanceWaypoint()`; `tf2_ros::Buffer` + `TransformListener` (odom→map); params (`multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time`); `[MULTI]` logs. |
 | `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Add `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time` args → node params. |
 | `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time` into cruise include. |
-| `cmu_planner/src/local_planner/CMakeLists.txt` | Modify | Add yaml-cpp, visualization_msgs, std_srvs. |
-| `cmu_planner/src/local_planner/package.xml` | Modify | Add yaml-cpp, visualization_msgs, std_srvs depends. |
+| `cmu_planner/src/local_planner/CMakeLists.txt` | Modify | Add yaml-cpp, visualization_msgs, std_srvs, tf2, tf2_ros, tf2_geometry_msgs; install `config/` dir. |
+| `cmu_planner/src/local_planner/package.xml` | Modify | Add yaml-cpp, visualization_msgs, std_srvs, tf2, tf2_ros, tf2_geometry_msgs depends. |
 | `cmu_planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route (route only). |
 | `cmu_planner/7multi.sh` | Create | Executable launcher (yaml|rviz mode + loop_count). |
 | `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | MarkerArray display + PublishPoint tool. |
