@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+@import .claude/rules/code-edit-markers.md
+
 ## Build Commands
 
 ### Prerequisites (one-time)

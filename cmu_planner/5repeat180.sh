@@ -12,4 +12,5 @@ ros2 launch vehicle_simulator system_real_robot.launch \
   rvizWaypointTopic:=/way_point_cruise \
   repeat_enabled:=true \
   loop_count:=$loop_count \
+  turn_angle:=180.0 \
   2>&1 | grep --line-buffered -E 'REPEAT|CRUISE'

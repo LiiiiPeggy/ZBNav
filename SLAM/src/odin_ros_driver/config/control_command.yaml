@@ -145,7 +145,7 @@ register_keys:
   # 0：Odometry mode，仅运行里程计，不进行完整建图；
   # 1：SLAM mode，执行定位与建图；
   # 2：Relocalization mode，在已有地图中进行重定位。
-  custom_map_mode: 1
+  custom_map_mode: 2
 
   # 自定义初始位姿，格式通常为：
   # [x, y, z, qx, qy, qz, qw]
@@ -165,7 +165,7 @@ register_keys:
 
   # 重定位所使用地图文件的绝对路径。
   # custom_map_mode=2 时必须填写，否则重定位启动会失败。
-  relocalization_map_abs_path: ""
+  relocalization_map_abs_path: "/root/work/wyx/lqp/SLAM/src/odin_ros_driver/map/map_20260807_151455.bin"
 
   # 保存建图结果时，可使用驱动提供的 set_param.sh 脚本：
   # ./set_param.sh save_map 1
