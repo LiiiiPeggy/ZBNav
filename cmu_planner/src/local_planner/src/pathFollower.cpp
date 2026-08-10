@@ -49,6 +49,7 @@ double stopYawRateGain = 7.5;
 double maxYawRate = 45.0;
 double maxSpeed = 1.0;
 double maxAccel = 1.0;
+double minMoveSpeed = 0.32;
 double switchTimeThre = 1.0;
 double dirDiffThre = 0.1;
 double stopDisThre = 0.2;
@@ -199,6 +200,7 @@ int main(int argc, char** argv)
   nh->declare_parameter<double>("maxYawRate", maxYawRate);
   nh->declare_parameter<double>("maxSpeed", maxSpeed);
   nh->declare_parameter<double>("maxAccel", maxAccel);
+  nh->declare_parameter<double>("minMoveSpeed", minMoveSpeed);
   nh->declare_parameter<double>("switchTimeThre", switchTimeThre);
   nh->declare_parameter<double>("dirDiffThre", dirDiffThre);
   nh->declare_parameter<double>("stopDisThre", stopDisThre);
@@ -228,6 +230,7 @@ int main(int argc, char** argv)
   nh->get_parameter("maxYawRate", maxYawRate);
   nh->get_parameter("maxSpeed", maxSpeed);
   nh->get_parameter("maxAccel", maxAccel);
+  nh->get_parameter("minMoveSpeed", minMoveSpeed);
   nh->get_parameter("switchTimeThre", switchTimeThre);
   nh->get_parameter("dirDiffThre", dirDiffThre);
   nh->get_parameter("stopDisThre", stopDisThre);
@@ -368,8 +371,23 @@ int main(int argc, char** argv)
         // safetyStop == 2 时完全停止发布 /cmd_vel，
         // 把控制权交给 cruiseController（原地掉头期间）
         if (safetyStop < 2) {
-          if (fabs(vehicleSpeed) <= maxAccel / 100.0) cmd_vel.linear.x = 0;
-          else cmd_vel.linear.x = vehicleSpeed;
+          if (fabs(vehicleSpeed) <= maxAccel / 100.0) {
+            cmd_vel.linear.x = 0.0;
+          } else {
+            cmd_vel.linear.x = vehicleSpeed;
+
+            // ################################
+            // C++: compensate robot minimum effective linear speed
+            // ################################
+            // 底层运动死区：|linear.x| <= minMoveSpeed 时实际不动。
+            // 接近终点时 pathFollower 会减速到死区以内，导致终点前卡死。
+            // 将非零速度提升到死区边界，保留正负号以兼容双向行驶。
+            if (fabs(cmd_vel.linear.x) < minMoveSpeed) {
+              cmd_vel.linear.x =
+                (cmd_vel.linear.x > 0.0) ? minMoveSpeed : -minMoveSpeed;
+            }
+          }
+
           cmd_vel.angular.z = vehicleYawRate;
           pubSpeed->publish(cmd_vel);
         }

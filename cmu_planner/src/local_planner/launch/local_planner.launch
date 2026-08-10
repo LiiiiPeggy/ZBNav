@@ -64,6 +64,7 @@
     <param name="maxYawRate" value="45.0" />
     <param name="maxSpeed" value="$(var maxSpeed)" />
     <param name="maxAccel" value="2.5" />
+    <param name="minMoveSpeed" value="0.32" />
     <param name="switchTimeThre" value="1.0" />
     <param name="dirDiffThre" value="0.5" />
     <param name="stopDisThre" value="0.2" />
