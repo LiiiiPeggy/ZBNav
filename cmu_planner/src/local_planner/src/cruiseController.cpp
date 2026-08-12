@@ -482,7 +482,7 @@ private:
       } else {
         state_ = CruiseState::COLLECTING_WAYPOINTS;
         RCLCPP_INFO(this->get_logger(),
-          "[MULTI] RViz mode: click waypoints (RViz Fixed Frame must be '%s'), then call /multi_start",
+          "[MULTI] RViz mode: click waypoints (any frame, auto-converted to %s), then call /multi_start",
           multi_frame_.c_str());
         publishMarkers();
       }
@@ -669,6 +669,36 @@ private:
       }
       return;
     }
+    }
+  }
+
+  // ################################
+  // C++: transform any PointStamped into the target frame
+  // ################################
+  // Generic coordinate conversion for RViz clicks: RViz Fixed Frame may
+  // differ from multi_frame_; the click is converted here so that
+  // waypoints_ always stores coordinates in multi_frame_.
+  bool transformPointToFrame(
+    const geometry_msgs::msg::PointStamped & input,
+    const std::string & target_frame,
+    geometry_msgs::msg::PointStamped & output)
+  {
+    // Case A: frames already match — no TF lookup needed
+    if (input.header.frame_id == target_frame) {
+      output = input;
+      return true;
+    }
+    // Case B: convert via the live TF tree (e.g. map -> odom in odom mode)
+    try {
+      geometry_msgs::msg::TransformStamped t =
+        tf_buffer_.lookupTransform(target_frame, input.header.frame_id, tf2::TimePointZero);
+      tf2::doTransform(input, output, t);
+      return true;
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_WARN(this->get_logger(),
+        "[MULTI] Cannot transform clicked waypoint %s -> %s: %s",
+        input.header.frame_id.c_str(), target_frame.c_str(), e.what());
+      return false;
     }
   }
 
@@ -907,24 +937,42 @@ private:
         "[MULTI] Route already started; RViz waypoint ignored");
       return;
     }
-    // v1: no TF conversion of clicks — the click frame must equal
-    // multi_frame_ (RViz Fixed Frame must be set to multi_frame_).
-    if (msg->header.frame_id != multi_frame_) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
-        "[MULTI] Waypoint frame '%s' != multi_frame '%s'; set RViz Fixed Frame to '%s' and re-click",
-        msg->header.frame_id.c_str(), multi_frame_.c_str(), multi_frame_.c_str());
+    // ################################
+    // C++: convert clicked waypoint frame to multi_frame
+    // ################################
+    // Invariant: waypoints_ always stores coordinates in multi_frame_
+    // (odom mode -> odom coords; map mode -> map coords). RViz Fixed Frame
+    // may differ from multi_frame_; clicks are converted via the live TF.
+    // The TF is needed only at click time — it is NOT a start condition.
+    if (msg->header.frame_id.empty()) {
+      RCLCPP_WARN(this->get_logger(),
+        "[MULTI] Waypoint has empty frame_id; ignored");
+      return;
+    }
+    geometry_msgs::msg::PointStamped converted;
+    if (!transformPointToFrame(*msg, multi_frame_, converted)) {
+      RCLCPP_WARN(this->get_logger(),
+        "[MULTI] Cannot add waypoint: TF %s -> %s unavailable",
+        msg->header.frame_id.c_str(), multi_frame_.c_str());
       return;
     }
     Waypoint w;
-    w.x = msg->point.x;
-    w.y = msg->point.y;
+    w.x = converted.point.x;
+    w.y = converted.point.y;
     w.turn_angle = 0.0;
     w.wait_time = default_wait_time_;
     waypoints_.push_back(w);
     publishMarkers();
-    RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Added WP%zu at (%.3f, %.3f) in %s frame; %zu total",
-      waypoints_.size() - 1, w.x, w.y, multi_frame_.c_str(), waypoints_.size());
+    if (msg->header.frame_id == multi_frame_) {
+      RCLCPP_INFO(this->get_logger(),
+        "[MULTI] Added WP%zu at (%.3f, %.3f) in %s frame; %zu total",
+        waypoints_.size() - 1, w.x, w.y, multi_frame_.c_str(), waypoints_.size());
+    } else {
+      RCLCPP_INFO(this->get_logger(),
+        "[MULTI] Added WP%zu: input %s=(%.3f, %.3f) -> stored %s=(%.3f, %.3f); %zu total",
+        waypoints_.size() - 1, msg->header.frame_id.c_str(), msg->point.x, msg->point.y,
+        multi_frame_.c_str(), w.x, w.y, waypoints_.size());
+    }
   }
 
   void startService(
@@ -1003,6 +1051,7 @@ private:
   // C++: add MULTI state members
   // ################################
   // MULTI members
+  // waypoints_ coordinates always belong to multi_frame_ (never mixed frames)
   std::vector<Waypoint> waypoints_;
   size_t waypoint_index_ = 0;
   // completed_loops_ and loop_count_ ALREADY EXIST from REPEAT — reuse, do NOT redeclare

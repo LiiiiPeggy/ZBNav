@@ -7,6 +7,10 @@ source install/setup.bash
 # ################################
 # Bash: launch multi-point cruise with yaml/rviz source and odom/map frame
 # ################################
+# RViz display frame and MULTI internal planning frame are independent:
+# - Real-robot RViz Fixed Frame may remain "map" (point clouds display correctly).
+# - Clicked PointStamped waypoints are automatically transformed to multi_frame.
+# - Default multi_frame stays "odom" (no map / no relocalization needed).
 mode=${1:-rviz}
 loop_count=${2:--1}
 frame=${3:-odom}
@@ -20,7 +24,9 @@ if [[ "$mode" != "yaml" && "$mode" != "rviz" ]]; then
   echo "  bash 7multi.sh yaml 3      # YAML route, odom frame, 3 loops"
   echo "  bash 7multi.sh yaml -1 map # YAML route in prebuilt map frame (needs Odin relocalization)"
   echo "  bash 7multi.sh rviz -1 map # RViz clicks in map frame (needs Odin relocalization)"
-  # map mode: set RViz Fixed Frame to 'map' before clicking waypoints (odom-frame clicks are rejected)
+  echo "Note: RViz Fixed Frame may stay 'map'; clicked waypoints are"
+  echo "      auto-transformed to multi_frame (display frame and planning"
+  echo "      frame are independent; default multi_frame stays 'odom')."
   exit 1
 fi
 

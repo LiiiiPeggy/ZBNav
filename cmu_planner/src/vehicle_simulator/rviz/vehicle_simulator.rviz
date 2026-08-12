@@ -518,9 +518,9 @@ Visualization Manager:
   Global Options:
     Background Color: 0; 0; 0
 # ################################
-# YAML: set RViz fixed frame to odom for default multi mode
+# YAML: restore shared RViz fixed frame to map
 # ################################
-    Fixed Frame: odom
+    Fixed Frame: map
     Frame Rate: 15
   Name: root
   Tools:
