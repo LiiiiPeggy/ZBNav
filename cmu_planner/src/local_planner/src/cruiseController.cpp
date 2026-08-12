@@ -306,7 +306,7 @@ private:
     pending_stop_ = false;
     active_goal_valid_ = false;
     RCLCPP_WARN(this->get_logger(),
-      "[MULTI] Stop received, cruise aborted");
+      "[CRUISE] Stop received, cruise aborted");
     state_ = CruiseState::IDLE;
   }
 
@@ -797,7 +797,7 @@ private:
 
     const Waypoint & w = waypoints_[waypoint_index_];
     if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
-      RCLCPP_WARN(this->get_logger(),
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
         "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
       return;  // stay in GO_TO_WAYPOINT, retry on next tick
     }
