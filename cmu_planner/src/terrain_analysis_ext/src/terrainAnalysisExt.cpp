@@ -85,6 +85,10 @@ queue<int> planarVoxelQueue;
 
 double laserCloudTime = 0;
 bool newlaserCloud = false;
+// ################################
+// C++: track input /registered_scan frame for /terrain_map_ext
+// ################################
+std::string laserCloudFrame = "map";
 
 double systemInitTime = 0;
 bool systemInited = false;
@@ -114,6 +118,12 @@ void odometryHandler(const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 void laserCloudHandler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr laserCloud2)
 {
   laserCloudTime = rclcpp::Time(laserCloud2->header.stamp).seconds();
+  // ################################
+  // C++: inherit /registered_scan frame for /terrain_map_ext
+  // ################################
+  if (!laserCloud2->header.frame_id.empty()) {
+    laserCloudFrame = laserCloud2->header.frame_id;
+  }
 
   if (!systemInited)
   {
@@ -556,7 +566,10 @@ int main(int argc, char** argv)
       sensor_msgs::msg::PointCloud2 terrainCloud2;
       pcl::toROSMsg(*terrainCloudElev, terrainCloud2);
       terrainCloud2.header.stamp = rclcpp::Time(static_cast<uint64_t>(laserCloudTime * 1e9));
-      terrainCloud2.header.frame_id = "map";
+      // ################################
+      // C++: publish /terrain_map_ext in inherited input frame
+      // ################################
+      terrainCloud2.header.frame_id = laserCloudFrame;
       pubTerrainCloud->publish(terrainCloud2);
     }
 
