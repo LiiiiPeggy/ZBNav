@@ -25,6 +25,7 @@ def generate_launch_description():
   # ################################
   multi_enabled = LaunchConfiguration('multi_enabled')
   multi_source = LaunchConfiguration('multi_source')
+  multi_frame = LaunchConfiguration('multi_frame')
   multi_route_file = LaunchConfiguration('multi_route_file')
   default_wait_time = LaunchConfiguration('default_wait_time')
 
@@ -44,6 +45,7 @@ def generate_launch_description():
   # ################################
   declare_multi_enabled = DeclareLaunchArgument('multi_enabled', default_value='false', description='Enable multi-point cruise')
   declare_multi_source = DeclareLaunchArgument('multi_source', default_value='yaml', description='Waypoint source: yaml|rviz')
+  declare_multi_frame = DeclareLaunchArgument('multi_frame', default_value='odom', description='Waypoint coordinate frame: odom|map')
   declare_multi_route_file = DeclareLaunchArgument('multi_route_file', default_value='', description='Path to multi_route.yaml (default: package share)')
   declare_default_wait_time = DeclareLaunchArgument('default_wait_time', default_value='2.0', description='Default wait at each waypoint (s)')
 
@@ -107,6 +109,7 @@ def generate_launch_description():
       # ################################
       'multi_enabled': multi_enabled,
       'multi_source': multi_source,
+      'multi_frame': multi_frame,
       'multi_route_file': multi_route_file,
       'default_wait_time': default_wait_time,
     }.items()
@@ -149,6 +152,7 @@ def generate_launch_description():
   # ################################
   ld.add_action(declare_multi_enabled)
   ld.add_action(declare_multi_source)
+  ld.add_action(declare_multi_frame)
   ld.add_action(declare_multi_route_file)
   ld.add_action(declare_default_wait_time)
 

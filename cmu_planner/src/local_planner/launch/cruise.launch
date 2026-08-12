@@ -13,6 +13,7 @@
   <!-- ################################ -->
   <arg name="multi_enabled" default="false"/>
   <arg name="multi_source" default="yaml"/>
+  <arg name="multi_frame" default="odom"/>
   <arg name="multi_route_file" default=""/>
   <arg name="default_wait_time" default="2.0"/>
 
@@ -30,6 +31,7 @@
     <!-- ################################ -->
     <param name="multi_enabled" value="$(var multi_enabled)" />
     <param name="multi_source" value="$(var multi_source)" />
+    <param name="multi_frame" value="$(var multi_frame)" />
     <param name="multi_route_file" value="$(var multi_route_file)" />
     <param name="default_wait_time" value="$(var default_wait_time)" />
   </node>
