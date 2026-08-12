@@ -518,9 +518,9 @@ Visualization Manager:
   Global Options:
     Background Color: 0; 0; 0
 # ################################
-# YAML: restore shared RViz fixed frame to map
+# YAML: use odom as shared RViz fixed frame for current Odin navigation chain
 # ################################
-    Fixed Frame: map
+    Fixed Frame: odom
     Frame Rate: 15
   Name: root
   Tools:
