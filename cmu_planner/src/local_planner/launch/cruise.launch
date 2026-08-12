@@ -8,6 +8,13 @@
   <arg name="turn_angle" default="180.0"/>
   <arg name="repeat_enabled" default="false"/>
   <arg name="loop_count" default="-1"/>
+  <!-- ################################ -->
+  <!-- XML: add multi-point cruise launch args -->
+  <!-- ################################ -->
+  <arg name="multi_enabled" default="false"/>
+  <arg name="multi_source" default="yaml"/>
+  <arg name="multi_route_file" default=""/>
+  <arg name="default_wait_time" default="2.0"/>
 
   <node pkg="local_planner" exec="cruiseController" name="cruise_controller" output="screen">
     <param name="max_yaw_rate" value="$(var max_yaw_rate)" />
@@ -18,6 +25,13 @@
     <param name="turn_angle" value="$(var turn_angle)" />
     <param name="repeat_enabled" value="$(var repeat_enabled)" />
     <param name="loop_count" value="$(var loop_count)" />
+    <!-- ################################ -->
+    <!-- XML: forward multi-point cruise launch params -->
+    <!-- ################################ -->
+    <param name="multi_enabled" value="$(var multi_enabled)" />
+    <param name="multi_source" value="$(var multi_source)" />
+    <param name="multi_route_file" value="$(var multi_route_file)" />
+    <param name="default_wait_time" value="$(var default_wait_time)" />
   </node>
 
 </launch>

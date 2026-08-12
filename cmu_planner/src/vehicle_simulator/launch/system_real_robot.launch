@@ -20,6 +20,14 @@ def generate_launch_description():
   turn_angle = LaunchConfiguration('turn_angle')
   min_yaw_rate = LaunchConfiguration('min_yaw_rate')
 
+  # ################################
+  # Python: bind multi-point cruise launch configurations
+  # ################################
+  multi_enabled = LaunchConfiguration('multi_enabled')
+  multi_source = LaunchConfiguration('multi_source')
+  multi_route_file = LaunchConfiguration('multi_route_file')
+  default_wait_time = LaunchConfiguration('default_wait_time')
+
   declare_cameraOffsetZ = DeclareLaunchArgument('cameraOffsetZ', default_value='0.0', description='')
   declare_vehicleX = DeclareLaunchArgument('vehicleX', default_value='0.0', description='')
   declare_vehicleY = DeclareLaunchArgument('vehicleY', default_value='0.0', description='')
@@ -30,6 +38,14 @@ def generate_launch_description():
   declare_loop_count = DeclareLaunchArgument('loop_count', default_value='-1', description='Round-trips (-1=infinite)')
   declare_turn_angle = DeclareLaunchArgument('turn_angle', default_value='180.0', description='Turn angle at each U-turn (deg)')
   declare_min_yaw_rate = DeclareLaunchArgument('min_yaw_rate', default_value='0.32', description='Minimum effective yaw rate (dead-zone floor)')
+
+  # ################################
+  # Python: declare multi-point cruise launch arguments
+  # ################################
+  declare_multi_enabled = DeclareLaunchArgument('multi_enabled', default_value='false', description='Enable multi-point cruise')
+  declare_multi_source = DeclareLaunchArgument('multi_source', default_value='yaml', description='Waypoint source: yaml|rviz')
+  declare_multi_route_file = DeclareLaunchArgument('multi_route_file', default_value='', description='Path to multi_route.yaml (default: package share)')
+  declare_default_wait_time = DeclareLaunchArgument('default_wait_time', default_value='2.0', description='Default wait at each waypoint (s)')
 
   start_local_planner = IncludeLaunchDescription(
     FrontendLaunchDescriptionSource(os.path.join(
@@ -86,6 +102,13 @@ def generate_launch_description():
       'loop_count': loop_count,
       'turn_angle': turn_angle,
       'min_yaw_rate': min_yaw_rate,
+      # ################################
+      # Python: forward multi-point cruise launch arguments
+      # ################################
+      'multi_enabled': multi_enabled,
+      'multi_source': multi_source,
+      'multi_route_file': multi_route_file,
+      'default_wait_time': default_wait_time,
     }.items()
   )
 
@@ -120,6 +143,14 @@ def generate_launch_description():
   ld.add_action(declare_loop_count)
   ld.add_action(declare_turn_angle)
   ld.add_action(declare_min_yaw_rate)
+
+  # ################################
+  # Python: add multi-point cruise declarations to launch description
+  # ################################
+  ld.add_action(declare_multi_enabled)
+  ld.add_action(declare_multi_source)
+  ld.add_action(declare_multi_route_file)
+  ld.add_action(declare_default_wait_time)
 
   ld.add_action(start_local_planner)
   ld.add_action(start_cruise)
