@@ -1,28 +1,35 @@
-# Multi-Point Cruise Implementation Plan
+# Multi-Point Cruise Implementation Plan (rev. 2: multi_source / multi_frame split)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add `multi_enabled` multi-point patrol to `cruiseController`: a closed-loop route of N waypoints, one of two exclusive sources (YAML file or RViz placement), each waypoint waits/turns, loops N rounds, RViz shows the route via MarkerArray.
+**Goal:** Add `multi_enabled` multi-point patrol to `cruiseController`: a closed-loop route of N waypoints, one of two exclusive sources (YAML file or RViz placement), each waypoint waits/turns, loops N rounds, RViz shows the route via MarkerArray. Waypoint **source** (`multi_source`) and coordinate **frame** (`multi_frame`) are independent concepts: the default `multi_frame=odom` works with NO prebuilt map and NO Odin relocalization — exactly like the field-verified `cruise`; `multi_frame=map` optionally enables prebuilt-map routes via Odin relocalization.
 
-**Architecture:** Extend `cruiseController.cpp` with a waypoint queue (`waypoints_` + `waypoint_index_`), new states (`WAIT_LOCALIZATION`, `COLLECTING_WAYPOINTS`, `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`), a `/multi_waypoints` MarkerArray publisher, `/multi_waypoint_add` subscription, and `/multi_start` Trigger service. `multi_enabled=false` (default) keeps SINGLE/REPEAT untouched. New deps: yaml-cpp, visualization_msgs, std_srvs, tf2/tf2_ros/tf2_geometry_msgs.
+**Architecture:** Extend `cruiseController.cpp` with a waypoint queue (`waypoints_` + `waypoint_index_`), new states (`WAIT_LOCALIZATION`, `COLLECTING_WAYPOINTS`, `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`), a `/multi_waypoints` MarkerArray publisher, `/multi_waypoint_add` subscription, and `/multi_start` Trigger service. `multi_frame` selects how waypoints enter the execution stage: `odom` → waypoint coordinates are used directly (no TF, no map dependency); `map` → each waypoint is converted map→odom via `lookupTransform` before driving. Both modes share the identical running state machine (GO_TO_WAYPOINT → TURN_AT_WAYPOINT → WAIT_AT_WAYPOINT → NEXT); only the coordinate handling at waypoint entry differs. `multi_enabled=false` (default) keeps SINGLE/REPEAT untouched. New deps: yaml-cpp, visualization_msgs, std_srvs, tf2/tf2_ros/tf2_geometry_msgs.
 
 **Tech Stack:** C++14 (local_planner CMakeLists sets C++14 — do NOT change it), rclcpp, yaml-cpp, tf2, visualization_msgs, std_srvs, launch XML/Python.
+
+**Revision note:** The MULTI implementation from rev. 1 (commits 48680d5..4fa5a88 on branch `multi`) hard-required the `odom↔map` TF in the WAIT_LOCALIZATION gate, `startNextWaypoint()`, and `/multi_start`, and hardcoded marker frame `"map"`. This revision removes that hard dependency: the tasks below modify that existing code in place — where a task says "replace the existing implementation", the code already exists on the branch in the map-TF form and must be changed to the new form shown.
 
 ## Global Constraints
 
 - Branch: `multi` (fork of `cruise`).
 - `multi_enabled=false` (default) MUST keep SINGLE/REPEAT behavior byte-for-byte identical.
-- Waypoint source is EXCLUSIVE, chosen at launch via `multi_source` (`yaml` | `rviz`), never merged.
+- `multi_source` (`yaml` | `rviz`) and `multi_frame` (`odom` | `map`) are **INDEPENDENT**, both chosen at launch, both validated in the constructor (throw on invalid value).
+- **`multi_frame=odom` is the DEFAULT and MUST NOT require**: `odom↔map` TF, Odin `custom_map_mode=2`, or a prebuilt `.bin` map. Only `/state_estimation` publishing is required. Waypoint coordinates are already odom-frame; NO map→odom conversion is performed.
+- **`multi_frame=map` (optional enhancement)**: waypoint coordinates are map-frame; requires Odin relocalization so `odom↔map` TF exists. Each waypoint is converted map→odom via explicit `lookupTransform("odom","map", tf2::TimePointZero)` + `tf2::doTransform`, cached once per waypoint; on lookup failure, retry next tick (same retry contract as before).
+- `WAIT_LOCALIZATION` gate: `has_odom_` is always required; `canTransform("odom","map")` is additionally required ONLY when `multi_frame_=="map"`. (State name stays `WAIT_LOCALIZATION` — renaming to `WAIT_POSE` deferred to keep the diff minimal.)
+- `/multi_start` gate (rviz mode): `waypoints_.size()>=2 && has_odom_` in odom mode; additionally `canTransform("odom","map")` in map mode.
+- `/multi_waypoints` markers are published with `header.frame_id = multi_frame_` (NOT hardcoded `"map"`).
+- `/multi_waypoint_add` clicks MUST have `msg->header.frame_id == multi_frame_`; on mismatch the waypoint is REJECTED with a throttled WARN that names the expected frame (v1: no TF conversion of clicks). Ship RViz Fixed Frame as `odom`; in map mode the operator switches RViz Fixed Frame to `map` before clicking (documented in Task 9).
+- YAML route coordinates carry NO frame field — their frame is `multi_frame_` by construction (`multi_route.yaml` values are odom coordinates in odom mode, map coordinates in map mode).
 - `loop_count` counts **complete round-trips that physically drive WPN→WP0, arrive at WP0, AND finish WP0's own turn/wait** — then and only then `completed_loops_++`. `loop_count=1` must end parked at WP0.
 - Every waypoint arrival publishes `/stop=2` (seize `/cmd_vel`) BEFORE any turn/wait; released only on next `/way_point`. The self-published `/stop=2` must be preceded by `ignore_next_internal_stop_ = true` (via `seizeControlForMulti()`), and `turning_internal_` must NOT be set — so an external `/stop=2` aborts immediately in any MULTI state.
-- `active_goal_odom_` = current waypoint transformed map→odom via explicit `lookupTransform("odom","map", tf2::TimePointZero)` + `tf2::doTransform`, cached once per waypoint; arrival check uses `/state_estimation` (odom frame) vs `active_goal_odom_`.
-- `WAIT_LOCALIZATION` gate: cruise starts only when `has_odom_` AND `canTransform("odom","map")` both true.
 - `/multi_waypoints` MarkerArray QoS = `rclcpp::QoS(10).reliable().transient_local()`.
 - `default_wait_time` is a node param (2.0 s), not YAML-only.
 - `multi_route_file` default = `ament_index_cpp::get_package_share_directory("local_planner") + "/config/multi_route.yaml"`.
 - CMake `install(DIRECTORY config DESTINATION share/${PROJECT_NAME})`.
 - Do NOT modify `localPlanner.cpp`, `pathFollower.cpp` travel logic, or terrain packages.
-- `7multi.sh` forces `repeat_enabled:=false`.
+- `7multi.sh` forces `repeat_enabled:=false`; usage `bash 7multi.sh [yaml|rviz] [loop_count] [odom|map]` with `mode=${1:-yaml} loop_count=${2:--1} frame=${3:-odom}`.
 - **MULTI publishes `/way_point` with `frame_id="odom"`** via a NEW `sendMultiWaypointAndGo()`; the existing `sendWaypointAndGo()` (hardcoded `frame_id="map"`) is left untouched for SINGLE/REPEAT.
 - `multi_enabled_ && repeat_enabled_` is an **invalid combination** — node validates and refuses to start.
 - `waypointCallback()` ignores `/way_point_cruise` entirely when `multi_enabled_`.
@@ -36,14 +43,14 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | MULTI state machine, queue, TF, YAML, markers, service |
-| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Pass `multi_*` + `default_wait_time` params |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_*` + `default_wait_time` args |
+| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | MULTI state machine, queue, `multi_frame` coordinate handling, TF (map mode), YAML, markers, service |
+| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Pass `multi_*` + `default_wait_time` + `multi_frame` params |
+| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_*` + `default_wait_time` + `multi_frame` args |
 | `cmu_planner/src/local_planner/CMakeLists.txt` | Modify | New deps + config install |
 | `cmu_planner/src/local_planner/package.xml` | Modify | New deps |
-| `cmu_planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route |
-| `cmu_planner/7multi.sh` | Create | Executable launcher |
-| `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | MarkerArray display + PublishPoint tool |
+| `cmu_planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route (coordinates in `multi_frame_`) |
+| `cmu_planner/7multi.sh` | Modify | Executable launcher with optional 3rd param `frame` |
+| `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | Fixed Frame → `odom` (MarkerArray display + PublishPoint tool already present) |
 
 ---
 
@@ -56,7 +63,7 @@
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: `find_package` for yaml-cpp/visualization_msgs/std_srvs/ament_index_cpp/tf2/tf2_ros/tf2_geometry_msgs; `ament_target_dependencies(cruiseController ...)` extended (yaml-cpp NOT among them); `target_link_libraries(cruiseController yaml-cpp)`; `install(DIRECTORY config ...)`; `<depend>` entries; default YAML file. Used by Task 2-9.
+- Produces: `find_package` for yaml-cpp/visualization_msgs/std_srvs/ament_index_cpp; `ament_target_dependencies(cruiseController ...)` extended (yaml-cpp NOT among them); `target_link_libraries(cruiseController yaml-cpp)`; `install(DIRECTORY config ...)`; `<depend>` entries; default YAML file. Used by Tasks 2-9.
 
 - [ ] **Step 1: CMakeLists — find_package**
 
@@ -69,11 +76,9 @@ find_package(std_srvs REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 ```
 
-`tf2`, `tf2_ros`, `tf2_geometry_msgs` are already found by `localPlanner`/`pathFollower` (lines 21-23), so no new find needed — but confirm they are in the file. If not, add them.
+`tf2`, `tf2_ros`, `tf2_geometry_msgs` are already found by `localPlanner`/`pathFollower`, so no new find needed — but confirm they are in the file. If not, add them.
 
 - [ ] **Step 2: CMakeLists — cruiseController deps**
-
-Replace line 36:
 
 ```cmake
 ament_target_dependencies(cruiseController rclcpp geometry_msgs nav_msgs std_msgs visualization_msgs std_srvs tf2 tf2_ros tf2_geometry_msgs ament_index_cpp)
@@ -127,6 +132,8 @@ multi_cruise:
       turn_angle: 180.0
 ```
 
+The coordinates have NO frame field — they are interpreted in `multi_frame_` (odom coordinates in odom mode, map coordinates in map mode).
+
 - [ ] **Step 6: Build**
 
 ```bash
@@ -148,7 +155,7 @@ git commit -m "feat(multi): add yaml-cpp/visualization_msgs/std_srvs/tf2 deps, c
 
 ---
 
-### Task 2: Waypoint struct + new params + MULTI state enum
+### Task 2: Waypoint struct + new params (incl. multi_frame) + MULTI state enum
 
 **Files:**
 - Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
@@ -160,9 +167,12 @@ git commit -m "feat(multi): add yaml-cpp/visualization_msgs/std_srvs/tf2 deps, c
   `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT` (append after existing 5 states).
   Member fields used by Tasks 3-9: `std::vector<Waypoint> waypoints_;`, `size_t waypoint_index_=0;`,
   `bool closing_loop_=false;`, `bool multi_enabled_=false;`,
-  `std::string multi_source_="yaml";`, `std::string multi_route_file_;`, `double default_wait_time_=2.0;`,
+  `std::string multi_source_="yaml";`, `std::string multi_frame_="odom";`,
+  `std::string multi_route_file_;`, `double default_wait_time_=2.0;`,
   `double gx_odom_=0.0, gy_odom_=0.0;`, `bool active_goal_valid_=false;`, `double wait_start_time_=0.0;`.
   **`completed_loops_` and `loop_count_` already exist from REPEAT — REUSE, do NOT redeclare.**
+
+**Current code (already on branch `multi`):** struct, enum extensions, params, and members exist from rev. 1 WITHOUT `multi_frame`. This task adds `multi_frame` to the param reads/validation and to the members; the rest is unchanged.
 
 - [ ] **Step 1: Add `#include`s and struct**
 
@@ -212,20 +222,22 @@ enum class CruiseState {
 
 - [ ] **Step 3: Declare + read new params**
 
-In the constructor, after existing declares (line 37), add:
+In the constructor, add `multi_frame` to the declares:
 
 ```cpp
     this->declare_parameter<bool>("multi_enabled", false);
     this->declare_parameter<std::string>("multi_source", "yaml");
+    this->declare_parameter<std::string>("multi_frame", "odom");
     this->declare_parameter<std::string>("multi_route_file", "");
     this->declare_parameter<double>("default_wait_time", 2.0);
 ```
 
-After the existing gets (line 42), add:
+After the existing gets, add the `multi_frame` get + validation:
 
 ```cpp
     multi_enabled_ = this->get_parameter("multi_enabled").as_bool();
     multi_source_ = this->get_parameter("multi_source").as_string();
+    multi_frame_ = this->get_parameter("multi_frame").as_string();
     std::string mrf = this->get_parameter("multi_route_file").as_string();
     multi_route_file_ = mrf.empty()
       ? ament_index_cpp::get_package_share_directory("local_planner") + "/config/multi_route.yaml"
@@ -237,6 +249,13 @@ After the existing gets (line 42), add:
       RCLCPP_ERROR(this->get_logger(),
         "[MULTI] Invalid multi_source='%s' (must be 'yaml' or 'rviz')", multi_source_.c_str());
       throw std::runtime_error("Invalid multi_source");
+    }
+
+    // Validate multi_frame
+    if (multi_frame_ != "odom" && multi_frame_ != "map") {
+      RCLCPP_ERROR(this->get_logger(),
+        "[MULTI] Invalid multi_frame='%s' (must be 'odom' or 'map')", multi_frame_.c_str());
+      throw std::runtime_error("Invalid multi_frame");
     }
 
     // multi + repeat is an invalid combination
@@ -259,6 +278,7 @@ Add to the private member block (after existing members):
   bool closing_loop_ = false;
   bool multi_enabled_ = false;
   std::string multi_source_;
+  std::string multi_frame_;
   std::string multi_route_file_;
   double default_wait_time_ = 2.0;
   double gx_odom_ = 0.0, gy_odom_ = 0.0;
@@ -303,22 +323,28 @@ Expected: builds clean.
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
 git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(multi): Waypoint struct, MULTI params, extended state enum"
+git commit -m "feat(multi): add multi_frame param (odom|map, default odom)"
 ```
 
 ---
 
-### Task 3: tf2 buffer + WAIT_LOCALIZATION gate + waypoint entry
+### Task 3: tf2 buffer + MULTI setup + frame-aware waypoint entry
 
 **Files:**
 - Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
-- Consumes: `multi_enabled_`, `multi_source_`, `multi_route_file_`, `default_wait_time_`,
+- Consumes: `multi_enabled_`, `multi_source_`, `multi_frame_`, `multi_route_file_`, `default_wait_time_`,
   `Waypoint`, new states, `has_odom_` (existing)
-- Produces: `tf_buffer_`/`tf_listener_` members; `loadYaml()`, `publishMarkers()`,
-  `transformToOdom()`, `beginMultiCruise()`; `WAIT_LOCALIZATION` gating in `controlLoop()`.
+- Produces: `tf_buffer_`/`tf_listener_` members; `loadYaml()`, `publishMarkers()` (frame-aware),
+  `transformToOdom()` (map mode only), `beginMultiCruise()`, `startNextWaypoint()` (frame-aware),
+  `sendMultiWaypointAndGo()`, `addWaypointCallback()` (frame-checked), `startService()` (frame-aware gate).
   Used by Tasks 4-9.
+
+**Current code (already on branch `multi`):** all of these exist from rev. 1. The changes in this task:
+(1) `publishMarkers()` frame_id `"map"` → `multi_frame_`; (2) `startNextWaypoint()` unconditional
+`transformToOdom()` → `multi_frame_`-dependent branch; (3) `addWaypointCallback()` gains a frame check;
+(4) `startService()` TF check becomes conditional on `multi_frame_=="map"`. The rest is unchanged.
 
 - [ ] **Step 1: Add tf2 members + init**
 
@@ -357,6 +383,8 @@ After the `/stop` subscription block, add MULTI setup:
     // MULTI mode setup — MUST be after markers_pub_ creation (Step 7)
     // BOTH sources enter WAIT_LOCALIZATION first; Task 4's gate then dispatches
     // to beginMultiCruise() (yaml) or COLLECTING_WAYPOINTS (rviz).
+    // The gate requires /state_estimation always, and the relocalization TF
+    // only when multi_frame_=="map".
     if (multi_enabled_) {
       if (multi_source_ == "yaml") {
         loadYaml();
@@ -367,7 +395,7 @@ After the `/stop` subscription block, add MULTI setup:
         }
       } else {
         RCLCPP_INFO(this->get_logger(),
-          "[MULTI] RViz mode: waiting for localization, then collect waypoints");
+          "[MULTI] RViz mode: waiting for pose, then collect waypoints");
       }
       state_ = CruiseState::WAIT_LOCALIZATION;
       publishMarkers();
@@ -391,7 +419,8 @@ After the `/stop` subscription block, add MULTI setup:
         waypoints_.push_back(w);
       }
       RCLCPP_INFO(this->get_logger(),
-        "[MULTI] Loaded %zu waypoints from %s", waypoints_.size(), multi_route_file_.c_str());
+        "[MULTI] Loaded %zu waypoints from %s (frame=%s)",
+        waypoints_.size(), multi_route_file_.c_str(), multi_frame_.c_str());
     } catch (const std::exception & e) {
       RCLCPP_ERROR(this->get_logger(),
         "[MULTI] Failed to load %s: %s", multi_route_file_.c_str(), e.what());
@@ -399,7 +428,11 @@ After the `/stop` subscription block, add MULTI setup:
   }
 ```
 
-- [ ] **Step 4: Implement `publishMarkers()`**
+- [ ] **Step 4: Implement `publishMarkers()` — frame follows multi_frame**
+
+Replace the existing `publishMarkers()` (its header lambda hardcodes `"map"`).
+Keep the existing marker comment `C++: publish MULTI route and waypoint markers`
+(rule: reuse existing marker — purpose unchanged); only the header lambda changes:
 
 ```cpp
   void publishMarkers()
@@ -407,7 +440,7 @@ After the `/stop` subscription block, add MULTI setup:
     visualization_msgs::msg::MarkerArray arr;
     auto header = [this]() {
       std_msgs::msg::Header h;
-      h.frame_id = "map";
+      h.frame_id = multi_frame_;
       h.stamp = this->now();
       return h;
     };
@@ -480,7 +513,7 @@ After the `/stop` subscription block, add MULTI setup:
   }
 ```
 
-- [ ] **Step 5: Implement `transformToOdom()`**
+- [ ] **Step 5: Implement `transformToOdom()` — used ONLY when `multi_frame_=="map"`**
 
 ```cpp
   bool transformToOdom(double mx, double my, double & ox, double & oy)
@@ -510,7 +543,7 @@ After the `/stop` subscription block, add MULTI setup:
   }
 ```
 
-- [ ] **Step 6: Implement `beginMultiCruise()`**
+- [ ] **Step 6: Implement `beginMultiCruise()` + frame-aware `startNextWaypoint()`**
 
 ```cpp
   void beginMultiCruise()
@@ -519,11 +552,13 @@ After the `/stop` subscription block, add MULTI setup:
     completed_loops_ = 0;
     closing_loop_ = false;
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Cruise started: %zu waypoints, loop_count=%d",
-      waypoints_.size(), loop_count_);
+      "[MULTI] Cruise started: %zu waypoints, loop_count=%d, frame=%s",
+      waypoints_.size(), loop_count_, multi_frame_.c_str());
     startNextWaypoint();
   }
 
+  // Falls under the existing marker `C++: implement MULTI cruise start sequence`
+  // (rule: reuse existing marker — purpose unchanged); only the body changes.
   void startNextWaypoint()
   {
     if (waypoint_index_ >= waypoints_.size()) {
@@ -531,22 +566,30 @@ After the `/stop` subscription block, add MULTI setup:
       state_ = CruiseState::IDLE;
       return;
     }
-    // Enter GO_TO_WAYPOINT FIRST and clear active_goal_valid_ BEFORE the TF
-    // transform, so that if lookup fails the controlLoop retries next tick
-    // (GO_TO_WAYPOINT sees active_goal_valid_==false and calls startNextWaypoint()).
+    // Enter GO_TO_WAYPOINT FIRST and clear active_goal_valid_ BEFORE any
+    // coordinate work, so that if map-mode transform fails the controlLoop
+    // retries next tick (GO_TO_WAYPOINT sees active_goal_valid_==false and
+    // calls startNextWaypoint()).
     state_ = CruiseState::GO_TO_WAYPOINT;
     active_goal_valid_ = false;
 
     const Waypoint & w = waypoints_[waypoint_index_];
-    if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
-      RCLCPP_WARN(this->get_logger(),
-        "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
-      return;  // stay in GO_TO_WAYPOINT, retry on next tick
+    if (multi_frame_ == "odom") {
+      // odom mode (default): waypoint coordinates ARE odom coordinates.
+      // No TF, no map, no relocalization required.
+      gx_odom_ = w.x;
+      gy_odom_ = w.y;
+    } else {  // multi_frame_ == "map"
+      if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
+        return;  // stay in GO_TO_WAYPOINT, retry on next tick
+      }
     }
     active_goal_valid_ = true;
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Going to WP%zu: map=(%.3f, %.3f) odom=(%.3f, %.3f)",
-      waypoint_index_, w.x, w.y, gx_odom_, gy_odom_);
+      "[MULTI] Going to WP%zu: (%s frame) (%.3f, %.3f) -> odom (%.3f, %.3f)",
+      waypoint_index_, multi_frame_.c_str(), w.x, w.y, gx_odom_, gy_odom_);
     sendMultiWaypointAndGo(gx_odom_, gy_odom_);
     publishMarkers();
   }
@@ -597,7 +640,7 @@ In constructor, add (only when `multi_enabled_`):
     }
 ```
 
-- [ ] **Step 8: Implement `addWaypointCallback()` + `startService()`**
+- [ ] **Step 8: Implement `addWaypointCallback()` (frame-checked) + `startService()` (frame-aware gate)**
 
 ```cpp
   void addWaypointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
@@ -612,6 +655,16 @@ In constructor, add (only when `multi_enabled_`):
         "[MULTI] Route already started; RViz waypoint ignored");
       return;
     }
+    // This check is added under the existing marker `C++: handle RViz waypoint
+    // add and start service` (rule: reuse existing marker — purpose unchanged).
+    // v1: no TF conversion of clicks — the click frame must equal
+    // multi_frame_ (RViz Fixed Frame must be set to multi_frame_).
+    if (msg->header.frame_id != multi_frame_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+        "[MULTI] Waypoint frame '%s' != multi_frame '%s'; set RViz Fixed Frame to '%s' and re-click",
+        msg->header.frame_id.c_str(), multi_frame_.c_str(), multi_frame_.c_str());
+      return;
+    }
     Waypoint w;
     w.x = msg->point.x;
     w.y = msg->point.y;
@@ -620,8 +673,8 @@ In constructor, add (only when `multi_enabled_`):
     waypoints_.push_back(w);
     publishMarkers();
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Added WP%zu at (%.3f, %.3f); %zu total",
-      waypoints_.size() - 1, w.x, w.y, waypoints_.size());
+      "[MULTI] Added WP%zu at (%.3f, %.3f) in %s frame; %zu total",
+      waypoints_.size() - 1, w.x, w.y, multi_frame_.c_str(), waypoints_.size());
   }
 
   void startService(
@@ -642,8 +695,19 @@ In constructor, add (only when `multi_enabled_`):
       RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
       return;
     }
-    // Re-check localization TF before starting
-    if (!tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+    if (!has_odom_) {
+      res->success = false;
+      res->message = "/state_estimation not available";
+      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+      return;
+    }
+    // ################################
+    // C++: gate /multi_start on relocalization TF only in map mode
+    // ################################
+    // odom mode starts with /state_estimation only; map mode additionally
+    // needs the relocalization TF (re-checked at start time).
+    if (multi_frame_ == "map" &&
+        !tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
       res->success = false;
       res->message = "odom->map TF not available";
       RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
@@ -669,7 +733,7 @@ Expected: builds clean.
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
 git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(multi): tf2 buffer, WAIT_LOCALIZATION gate, loadYaml/publishMarkers, /multi_waypoint_add + /multi_start"
+git commit -m "feat(multi): frame-aware waypoint entry, markers in multi_frame, frame-checked RViz clicks"
 ```
 
 ---
@@ -680,35 +744,50 @@ git commit -m "feat(multi): tf2 buffer, WAIT_LOCALIZATION gate, loadYaml/publish
 - Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
-- Consumes: `multi_enabled_`, `has_odom_`, `tf_buffer_`, `state_`
+- Consumes: `multi_enabled_`, `has_odom_`, `multi_frame_`, `tf_buffer_`, `state_`
 - Produces: controlLoop dispatch — when `multi_enabled_`, `WAIT_LOCALIZATION` gates
-  YAML auto-start / RViz collection; `GO_TO_WAYPOINT` handles arrival.
+  YAML auto-start / RViz collection. **odom mode: only `has_odom_` required;
+  map mode: additionally `canTransform("odom","map")`.**
+
+**Current code (already on branch `multi`):** the gate requires
+`has_odom_ && tf_buffer_.canTransform(...)` unconditionally. Replace it with the
+frame-dependent gate below.
 
 - [ ] **Step 1: Gate at top of controlLoop**
 
 Add at the top of `controlLoop()` (before the existing switch):
 
 ```cpp
-    // MULTI: localization gate
+    // Existing marker `C++: MULTI localization gate dispatch` stays (rule:
+    // reuse existing marker — purpose unchanged); the condition changes.
+    // MULTI: pose gate — odom mode needs only /state_estimation (no map,
+    // no relocalization); map mode additionally waits for the relocalization TF.
     if (multi_enabled_ && state_ == CruiseState::WAIT_LOCALIZATION) {
-      if (has_odom_ && tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
-        RCLCPP_INFO(this->get_logger(),
-          "[MULTI] Localization ready (odom→map TF available), proceeding");
-        if (multi_source_ == "yaml") {
-          if (waypoints_.size() >= 2) {
-            beginMultiCruise();
-          } else {
-            state_ = CruiseState::IDLE;
-          }
+      if (!has_odom_) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Waiting for /state_estimation...");
+        return;
+      }
+      if (multi_frame_ == "map" &&
+          !tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Waiting for odom->map TF (map mode)...");
+        return;
+      }
+      RCLCPP_INFO(this->get_logger(),
+        "[MULTI] Pose ready (frame=%s), proceeding", multi_frame_.c_str());
+      if (multi_source_ == "yaml") {
+        if (waypoints_.size() >= 2) {
+          beginMultiCruise();
         } else {
-          state_ = CruiseState::COLLECTING_WAYPOINTS;
-          RCLCPP_INFO(this->get_logger(),
-            "[MULTI] RViz mode: click waypoints, then call /multi_start");
-          publishMarkers();
+          state_ = CruiseState::IDLE;
         }
       } else {
-        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-          "[MULTI] Waiting for localization/TF...");
+        state_ = CruiseState::COLLECTING_WAYPOINTS;
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] RViz mode: click waypoints (RViz Fixed Frame must be '%s'), then call /multi_start",
+          multi_frame_.c_str());
+        publishMarkers();
       }
       return;
     }
@@ -731,7 +810,7 @@ Expected: builds clean.
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
 git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(multi): WAIT_LOCALIZATION gate dispatch (yaml auto-start / rviz collect)"
+git commit -m "feat(multi): WAIT_LOCALIZATION gate requires relocalization TF only in map mode"
 ```
 
 ---
@@ -746,109 +825,19 @@ git commit -m "feat(multi): WAIT_LOCALIZATION gate dispatch (yaml auto-start / r
   `goal_clear_range` param, `wait_start_time_`, `default_wait_time_`, `publishTurnCmd()` (existing),
   `turnDone()` (existing), `publishZeroCmd()` (existing)
 - Produces: the three MULTI running states in `controlLoop()`. Consumed by Task 6 (`advanceWaypoint`).
+  **Unchanged from rev. 1 — these states consume the already-frame-resolved `gx_odom_/gy_odom_`.**
+  Both modes share this identical running state machine (user requirement 十).
 
-- [ ] **Step 1: Add `seizeControlForMulti()` helper**
+**Current code (already on branch `multi`):** this task is already fully implemented and
+needs NO changes. Verify it is present, then commit nothing new — the task is a no-op
+verification pass (build + confirm the cases exist).
 
-Insert before `publishTurnCmd()`:
+- [ ] **Step 1: Verify the three running-state cases exist**
 
-```cpp
-  // Publish /stop=2 to seize /cmd_vel from pathFollower, but FIRST set
-  // ignore_next_internal_stop_ so the node's own /stop=2 is not mistaken
-  // for an external stop. turning_internal_ is deliberately NOT set, so an
-  // external /stop=2 still aborts immediately in any MULTI state.
-  void seizeControlForMulti()
-  {
-    ignore_next_internal_stop_ = true;
-    auto stop_msg = std_msgs::msg::Int8();
-    stop_msg.data = 2;
-    stop_pub_->publish(stop_msg);
-  }
-```
-
-- [ ] **Step 2: Add GO_TO_WAYPOINT / TURN_AT_WAYPOINT / WAIT_AT_WAYPOINT cases**
-
-Add to the `controlLoop()` switch (before the default/end):
-
-```cpp
-    case CruiseState::GO_TO_WAYPOINT: {
-      if (!active_goal_valid_) {
-        startNextWaypoint();
-        return;
-      }
-      double dx = current_x_ - gx_odom_;
-      double dy = current_y_ - gy_odom_;
-      double goal_clear_range = this->get_parameter("goal_clear_range").as_double();
-      if (dx * dx + dy * dy < goal_clear_range * goal_clear_range) {
-        active_goal_valid_ = false;
-        // seize /cmd_vel BEFORE any turn/wait; publishZeroCmd to hold still
-        seizeControlForMulti();
-        publishZeroCmd();
-        RCLCPP_INFO(this->get_logger(),
-          "[MULTI] Reached WP%zu", waypoint_index_);
-
-        const Waypoint & w = waypoints_[waypoint_index_];
-        if (fabs(w.turn_angle) > 1e-3) {
-          RCLCPP_INFO(this->get_logger(),
-            "[MULTI] Turning %.0f deg at WP%zu", w.turn_angle, waypoint_index_);
-          target_yaw_ = normalizeAngle(current_yaw_ + w.turn_angle * M_PI / 180.0);
-          state_ = CruiseState::TURN_AT_WAYPOINT;
-        } else {
-          wait_start_time_ = this->now().seconds();
-          state_ = CruiseState::WAIT_AT_WAYPOINT;
-        }
-      }
-      return;
-    }
-
-    case CruiseState::TURN_AT_WAYPOINT: {
-      if (turnDone()) {
-        publishZeroCmd();
-        wait_start_time_ = this->now().seconds();
-        state_ = CruiseState::WAIT_AT_WAYPOINT;
-        RCLCPP_INFO(this->get_logger(), "[MULTI] Turn done at WP%zu", waypoint_index_);
-      } else {
-        publishTurnCmd();
-      }
-      return;
-    }
-
-    case CruiseState::WAIT_AT_WAYPOINT: {
-      const Waypoint & w = waypoints_[waypoint_index_];
-      double elapsed = this->now().seconds() - wait_start_time_;
-      if (elapsed >= w.wait_time) {
-        RCLCPP_INFO(this->get_logger(),
-          "[MULTI] Wait done at WP%zu (%.1fs), advancing", waypoint_index_, w.wait_time);
-
-        // ################################
-        // C++: count a closed loop only after arriving at WP0 and finishing its wait
-        // ################################
-        // One round = physically drive WPN→WP0, arrive at WP0, and finish WP0's
-        // turn/wait. Only then completed_loops_++. loop_count=1 must end parked at WP0.
-        if (waypoint_index_ == 0 && closing_loop_) {
-          completed_loops_++;
-          bool done = (loop_count_ > 0 && completed_loops_ >= loop_count_);
-          RCLCPP_INFO(this->get_logger(),
-            "[MULTI] Loop %d/%s complete at WP0", completed_loops_,
-            (loop_count_ > 0 ? std::to_string(loop_count_).c_str() : "inf"));
-          if (done) {
-            publishZeroCmd();
-            RCLCPP_INFO(this->get_logger(),
-              "[MULTI] Cruise complete after %d loops", completed_loops_);
-            completed_loops_ = 0;
-            closing_loop_ = false;
-            state_ = CruiseState::IDLE;
-            return;
-          }
-          closing_loop_ = false;
-        }
-
-        advanceWaypoint();
-      } else {
-        publishZeroCmd();  // keep robot still; pathFollower already stopped via /stop=2
-      }
-      return;
-    }
-```
+Confirm in `controlLoop()` the `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`
+cases are present exactly as in rev. 1 (arrival → `seizeControlForMulti()` + `publishZeroCmd()` →
+turn (if `w.turn_angle != 0`) or wait → loop counting at WP0 → `advanceWaypoint()`).
+No edits needed.
 
 - [ ] **Step 2: Build**
 
@@ -858,13 +847,10 @@ cd cmu_planner && colcon build --symlink-install --packages-select local_planner
 
 Expected: builds clean.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Commit (none — no changes; proceed)**
 
-```bash
-# from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(multi): GO_TO_WAYPOINT arrival, /stop=2 seize, TURN_AT_WAYPOINT, WAIT_AT_WAYPOINT"
-```
+Skip the commit. Mark this task complete only after the build confirms the
+existing code still compiles.
 
 ---
 
@@ -879,14 +865,11 @@ git commit -m "feat(multi): GO_TO_WAYPOINT arrival, /stop=2 seize, TURN_AT_WAYPO
   **Loop counting is NOT here** — it lives in Task 5's `WAIT_AT_WAYPOINT`
   completion (arrival at WP0 + wait done), per the closed-loop semantics.
 
-- [ ] **Step 1: Implement `advanceWaypoint()` (index + closing_loop_ only, NO counting)**
+**Current code (already on branch `multi`):** fully implemented, no changes needed.
+
+- [ ] **Step 1: Verify `advanceWaypoint()`**
 
 ```cpp
-  // Advance the index. When wrapping past the last waypoint, set
-  // closing_loop_=true so the arriving-at-WP0 logic (Task 5's WAIT_AT_WAYPOINT
-  // completion) knows this WP0 arrival closes a round. This function does NOT
-  // count loops — counting happens only after the robot physically arrives at
-  // WP0 AND finishes WP0's turn/wait (see Task 5 Step 3).
   void advanceWaypoint()
   {
     waypoint_index_++;
@@ -913,13 +896,9 @@ cd cmu_planner && colcon build --symlink-install --packages-select local_planner
 
 Expected: builds clean.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Commit (none — no changes; proceed)**
 
-```bash
-# from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(multi): advanceWaypoint with closing_loop_ loop-count semantics"
-```
+Skip the commit.
 
 ---
 
@@ -934,41 +913,16 @@ git commit -m "feat(multi): advanceWaypoint with closing_loop_ loop-count semant
 - Produces: MULTI mode subscribes `/stop`; stopCallback aborts to `IDLE` in any
   MULTI state (reusing the flag mechanism so internal `/stop=2` isn't mistaken for external).
 
-- [ ] **Step 1: Subscribe /stop for MULTI too**
+**Current code (already on branch `multi`):** fully implemented, no changes needed.
 
-In the constructor, change the existing `/stop` subscription guard so it also
-activates in MULTI mode:
+- [ ] **Step 1: Verify `/stop` subscription + stopCallback**
 
-```cpp
-    if (this->get_parameter("repeat_enabled").as_bool() ||
-        this->get_parameter("multi_enabled").as_bool()) {
-      stop_sub_ = this->create_subscription<std_msgs::msg::Int8>(
-        "/stop", 10,
-        std::bind(&CruiseController::stopCallback, this, std::placeholders::_1));
-    }
-```
+Confirm the constructor subscribes `/stop` when `multi_enabled_` (in addition to
+`repeat_enabled_`), and that `stopCallback()` resets `completed_loops_`,
+`closing_loop_`, `pending_stop_`, `active_goal_valid_` and sets `state_ = IDLE`
+on external stop. No edits needed.
 
-- [ ] **Step 2: Generalize stopCallback for MULTI**
-
-The existing `stopCallback()` already: consumes `ignore_next_internal_stop_`,
-queues `pending_stop_` during `turning_internal_`, else `publishZeroCmd()` + resets
-counters + `state_ = IDLE`. This is correct for MULTI. Add MULTI-specific reset:
-
-```cpp
-    // (existing body)
-    publishZeroCmd();
-    completed_loops_ = 0;
-    closing_loop_ = false;
-    pending_stop_ = false;
-    active_goal_valid_ = false;
-    RCLCPP_WARN(this->get_logger(),
-      "[MULTI] Stop received, cruise aborted");
-    state_ = CruiseState::IDLE;
-```
-
-(Keep the `turning_internal_` / `ignore_next_internal_stop_` handling unchanged.)
-
-- [ ] **Step 3: Build**
+- [ ] **Step 2: Build**
 
 ```bash
 cd cmu_planner && colcon build --symlink-install --packages-select local_planner
@@ -976,17 +930,13 @@ cd cmu_planner && colcon build --symlink-install --packages-select local_planner
 
 Expected: builds clean.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit (none — no changes; proceed)**
 
-```bash
-# from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
-git commit -m "feat(multi): /stop abort in MULTI mode (reuse turning flag mechanism)"
-```
+Skip the commit.
 
 ---
 
-### Task 8: Launch args (cruise.launch + system_real_robot.launch)
+### Task 8: Launch args (cruise.launch + system_real_robot.launch) + multi_frame
 
 **Files:**
 - Modify: `cmu_planner/src/local_planner/launch/cruise.launch`
@@ -994,45 +944,30 @@ git commit -m "feat(multi): /stop abort in MULTI mode (reuse turning flag mechan
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time`
+- Produces: `multi_enabled`, `multi_source`, `multi_frame`, `multi_route_file`, `default_wait_time`
   launch args forwarded to the node (consumed by Task 2 params).
 
-- [ ] **Step 1: cruise.launch — add args**
+**Current code (already on branch `multi`):** the four rev. 1 args exist in both
+launch files. This task adds `multi_frame` (default `odom`) to both.
 
-Replace `cruise.launch` with (add the four new args + params):
+- [ ] **Step 1: cruise.launch — add `multi_frame` arg + param**
+
+In `cruise.launch`, add the `multi_frame` arg after `multi_source`:
 
 ```xml
-<launch>
-
-  <arg name="max_yaw_rate" default="45.0"/>
-  <arg name="min_yaw_rate" default="0.32"/>
-  <arg name="yaw_kp" default="1.5"/>
-  <arg name="yaw_tolerance" default="0.12"/>
-  <arg name="goal_clear_range" default="0.5"/>
-  <arg name="turn_angle" default="180.0"/>
-  <arg name="repeat_enabled" default="false"/>
-  <arg name="loop_count" default="-1"/>
-  <arg name="multi_enabled" default="false"/>
   <arg name="multi_source" default="yaml"/>
+  <arg name="multi_frame" default="odom"/>
   <arg name="multi_route_file" default=""/>
   <arg name="default_wait_time" default="2.0"/>
+```
 
-  <node pkg="local_planner" exec="cruiseController" name="cruise_controller" output="screen">
-    <param name="max_yaw_rate" value="$(var max_yaw_rate)" />
-    <param name="min_yaw_rate" value="$(var min_yaw_rate)" />
-    <param name="yaw_kp" value="$(var yaw_kp)" />
-    <param name="yaw_tolerance" value="$(var yaw_tolerance)" />
-    <param name="goal_clear_range" value="$(var goal_clear_range)" />
-    <param name="turn_angle" value="$(var turn_angle)" />
-    <param name="repeat_enabled" value="$(var repeat_enabled)" />
-    <param name="loop_count" value="$(var loop_count)" />
-    <param name="multi_enabled" value="$(var multi_enabled)" />
+And the param in the node block:
+
+```xml
     <param name="multi_source" value="$(var multi_source)" />
+    <param name="multi_frame" value="$(var multi_frame)" />
     <param name="multi_route_file" value="$(var multi_route_file)" />
     <param name="default_wait_time" value="$(var default_wait_time)" />
-  </node>
-
-</launch>
 ```
 
 - [ ] **Step 2: Validate cruise.launch XML**
@@ -1041,42 +976,30 @@ Replace `cruise.launch` with (add the four new args + params):
 python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('cmu_planner/src/local_planner/launch/cruise.launch'); print('XML OK')"
 ```
 
-- [ ] **Step 3: system_real_robot.launch — bind + declare + forward**
+- [ ] **Step 3: system_real_robot.launch — bind + declare + forward `multi_frame`**
 
-Add LaunchConfigurations after `min_yaw_rate`:
+Add the LaunchConfiguration after `multi_source`:
 
 ```python
-  multi_enabled = LaunchConfiguration('multi_enabled')
-  multi_source = LaunchConfiguration('multi_source')
-  multi_route_file = LaunchConfiguration('multi_route_file')
-  default_wait_time = LaunchConfiguration('default_wait_time')
+  multi_frame = LaunchConfiguration('multi_frame')
 ```
 
-Add declares after `declare_min_yaw_rate`:
+Add the declare after `declare_multi_source`:
 
 ```python
-  declare_multi_enabled = DeclareLaunchArgument('multi_enabled', default_value='false', description='Enable multi-point cruise')
-  declare_multi_source = DeclareLaunchArgument('multi_source', default_value='yaml', description='Waypoint source: yaml|rviz')
-  declare_multi_route_file = DeclareLaunchArgument('multi_route_file', default_value='', description='Path to multi_route.yaml (default: package share)')
-  declare_default_wait_time = DeclareLaunchArgument('default_wait_time', default_value='2.0', description='Default wait at each waypoint (s)')
+  declare_multi_frame = DeclareLaunchArgument('multi_frame', default_value='odom', description='Waypoint coordinate frame: odom|map')
 ```
 
-Add to the `start_cruise` `launch_arguments`:
+Add to the `start_cruise` `launch_arguments` (after `multi_source`):
 
 ```python
-      'multi_enabled': multi_enabled,
-      'multi_source': multi_source,
-      'multi_route_file': multi_route_file,
-      'default_wait_time': default_wait_time,
+      'multi_frame': multi_frame,
 ```
 
-Add to `ld.add_action` after `declare_min_yaw_rate`:
+Add to `ld.add_action` after `declare_multi_source`:
 
 ```python
-  ld.add_action(declare_multi_enabled)
-  ld.add_action(declare_multi_source)
-  ld.add_action(declare_multi_route_file)
-  ld.add_action(declare_default_wait_time)
+  ld.add_action(declare_multi_frame)
 ```
 
 - [ ] **Step 4: Validate system_real_robot.launch**
@@ -1091,23 +1014,25 @@ python3 -c "import ast; ast.parse(open('cmu_planner/src/vehicle_simulator/launch
 # from repo root (/home/yu/Codes_rk is the workspace root)
 git add cmu_planner/src/local_planner/launch/cruise.launch \
         cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
-git commit -m "feat(multi): forward multi_enabled/multi_source/multi_route_file/default_wait_time"
+git commit -m "feat(multi): forward multi_frame launch arg (odom|map, default odom)"
 ```
 
 ---
 
-### Task 9: 7multi.sh + RViz config
+### Task 9: 7multi.sh frame param + RViz Fixed Frame
 
 **Files:**
-- Create: `cmu_planner/7multi.sh`
+- Modify: `cmu_planner/7multi.sh`
 - Modify: `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz`
 
 **Interfaces:**
 - Consumes: `system_real_robot.launch` args (`enableCruise`, `multi_enabled`, `multi_source`,
-  `repeat_enabled`, `loop_count`, `rvizWaypointTopic`)
-- Produces: runnable launcher; RViz displays `/multi_waypoints` and offers `Publish Point`→`/multi_waypoint_add`.
+  `multi_frame`, `repeat_enabled`, `loop_count`, `rvizWaypointTopic`)
+- Produces: runnable launcher with optional 3rd param `frame`; RViz Fixed Frame `odom`
+  so the DEFAULT odom mode works with no map TF (MarkerArray display + PublishPoint
+  tool are already present from rev. 1).
 
-- [ ] **Step 1: Write 7multi.sh**
+- [ ] **Step 1: Rewrite 7multi.sh with `frame` param**
 
 ```bash
 #!/bin/bash
@@ -1116,16 +1041,27 @@ set -e
 source /opt/ros/humble/setup.bash
 source install/setup.bash
 
+# ################################
+# Bash: launch multi-point cruise with yaml/rviz source and odom/map frame
+# ################################
 mode=${1:-yaml}
 loop_count=${2:--1}
+frame=${3:-odom}
 
 if [[ "$mode" != "yaml" && "$mode" != "rviz" ]]; then
-  echo "Usage: bash 7multi.sh [yaml|rviz] [loop_count]"
+  echo "Usage: bash 7multi.sh [yaml|rviz] [loop_count] [odom|map]"
   echo "Examples:"
-  echo "  bash 7multi.sh yaml"
-  echo "  bash 7multi.sh yaml 3"
-  echo "  bash 7multi.sh rviz"
-  echo "  bash 7multi.sh rviz 3"
+  echo "  bash 7multi.sh yaml        # YAML route, odom frame (no map needed)"
+  echo "  bash 7multi.sh yaml 3      # YAML route, odom frame, 3 loops"
+  echo "  bash 7multi.sh rviz        # RViz clicks, odom frame (no map needed)"
+  echo "  bash 7multi.sh rviz 3      # RViz clicks, odom frame, 3 loops"
+  echo "  bash 7multi.sh yaml -1 map # YAML route in prebuilt map frame (needs Odin relocalization)"
+  echo "  bash 7multi.sh rviz -1 map # RViz clicks in map frame (needs Odin relocalization)"
+  exit 1
+fi
+
+if [[ "$frame" != "odom" && "$frame" != "map" ]]; then
+  echo "Error: frame must be 'odom' or 'map' (got '$frame')"
   exit 1
 fi
 
@@ -1134,100 +1070,95 @@ ros2 launch vehicle_simulator system_real_robot.launch \
   multi_enabled:=true \
   repeat_enabled:=false \
   multi_source:=$mode \
+  multi_frame:=$frame \
   loop_count:=$loop_count \
   rvizWaypointTopic:=/way_point_cruise \
   2>&1 | grep --line-buffered -E 'MULTI|CRUISE|WAYPOINT|WARN|ERROR'
 ```
 
-- [ ] **Step 2: Make executable**
+- [ ] **Step 2: Make executable + syntax check**
 
 ```bash
 chmod +x cmu_planner/7multi.sh
-```
-
-- [ ] **Step 3: Syntax check**
-
-```bash
 bash -n cmu_planner/7multi.sh && echo "syntax OK"
 ```
 
-- [ ] **Step 4: RViz config — add PublishPoint tool**
+- [ ] **Step 3: RViz config — Fixed Frame → odom**
 
-In `vehicle_simulator.rviz`, find the `Tools:` block and add after the existing WaypointTool entry:
-
-```yaml
-    - Class: rviz_default_plugins/PublishPoint
-      Name: Publish Point
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /multi_waypoint_add
-```
-
-- [ ] **Step 5: RViz config — add MarkerArray display**
-
-In the `Displays:` section of `vehicle_simulator.rviz`, add a display block with:
+In `vehicle_simulator.rviz`, change the root Fixed Frame from `map` to `odom`
+(currently ~line 520):
 
 ```yaml
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
-      Name: MultiWaypoints
-      Namespaces:
-        wp_sphere: true
-        wp_text: true
-        route: true
-      Queue Size: 10
-      Topic:
-        Depth: 5
-        Durability Policy: Transient Local
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /multi_waypoints
-      Value: true
+    Fixed Frame: odom
 ```
 
-The Durability Policy must be **Transient Local** to match the publisher's
-`transient_local()` QoS (R5/R14).
+**Why:** in odom mode (the default) there is NO `map` frame published, so a Fixed
+Frame of `map` would make RViz unable to display anything and Publish Point clicks
+would arrive in the wrong frame and be rejected by the node's frame check. `odom`
+is always published by `/state_estimation`, so it works in both modes for DISPLAY.
+**Map-mode operational note (document in the script header/README):** in
+`multi_frame=map` mode the operator must set RViz Fixed Frame to `map` before
+clicking waypoints — clicks are otherwise published in `odom` and rejected
+(throttled WARN names the expected frame).
 
-- [ ] **Step 6: Validate rviz file is still parseable YAML**
+- [ ] **Step 4: Validate rviz file is still parseable YAML**
 
 ```bash
 python3 -c "import yaml; yaml.safe_load(open('cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz')); print('rviz YAML OK')"
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
 git add cmu_planner/7multi.sh cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz
-git commit -m "feat(multi): add 7multi.sh launcher + RViz PublishPoint/MarkerArray config"
+git commit -m "feat(multi): 7multi.sh frame param (odom|map); RViz Fixed Frame odom"
 ```
 
 ---
 
 ## Verification (end-to-end)
 
+**Scenario A — no-map local multi-point cruise (DEFAULT, multi_frame=odom):**
+
 1. **Regression** — `multi_enabled=false` (default): `./3cruise.sh` and `./5repeat180.sh`
    behave unchanged.
-2. **YAML mode** — `./7multi.sh yaml 1`: auto-starts WP0→WP1→WP2 (from default route),
-   waits 2 s each, one closed loop then stops at WP0; `/multi_waypoints` shows spheres,
-   WP labels, closed-loop line.
-3. **RViz mode** — `./7multi.sh rviz`: robot still in `COLLECTING_WAYPOINTS`; click 3 points
-   via Publish Point; markers appear incrementally; `ros2 service call /multi_start
-   std_srvs/srv/Trigger "{}"` starts cruise. With <2 points the service rejects.
+2. **YAML + odom, no map** — Odin runs without relocalization (`custom_map_mode=0`, no
+   `.bin` map, no `odom↔map` TF). `./7multi.sh yaml 1` auto-starts WP0→WP1→WP2 from the
+   default route (odom-frame coordinates), waits 2 s each, one closed loop then stops at
+   WP0; `/multi_waypoints` shows spheres, WP labels, closed-loop line in the odom frame.
+3. **RViz + odom, no map** — `./7multi.sh rviz`: robot holds `COLLECTING_WAYPOINTS` once
+   `/state_estimation` arrives (no TF wait — verify no "Waiting for odom->map TF" log);
+   click 3 points via Publish Point (RViz Fixed Frame is `odom`); markers appear
+   incrementally; `ros2 service call /multi_start std_srvs/srv/Trigger "{}"` starts
+   cruise. With <2 points the service rejects. A click in the wrong frame is rejected
+   with the throttled WARN.
 4. **Loop / stop** — `loop_count=3` does 3 closed loops; `ros2 topic pub /stop
    std_msgs/msg/Int8 "{data: 2}" --once` aborts in any state (mid-drive/turn/wait).
-5. **Source exclusivity** — yaml mode ignores `/multi_waypoint_add` (throttled warn);
+
+**Scenario B — prebuilt-map global multi-point cruise (optional, multi_frame=map):**
+
+5. **YAML + map** — Odin relocalization on (`custom_map_mode=2`, `.bin` map, `odom↔map`
+   TF present). `./7multi.sh yaml -1 map`: YAML waypoints interpreted as map-frame,
+   TF-converted to odom per waypoint, route runs in the local planner.
+6. **RViz + map** — `./7multi.sh rviz -1 map`: set RViz Fixed Frame to `map` before
+   clicking; clicks accepted (frame matches); markers displayed in the map frame.
+   Without the relocalization TF, cruise never starts: WAIT_LOCALIZATION holds with a
+   throttled WARN, and `/multi_start` rejects with "odom->map TF not available".
+
+**Both modes (shared running state machine):**
+
+7. **Source exclusivity** — yaml mode ignores `/multi_waypoint_add` (throttled warn);
    rviz mode ignores YAML.
-6. **Late RViz** — start RViz after the node; `/multi_waypoints` still visible
+8. **Late RViz** — start RViz after the node; `/multi_waypoints` still visible
    (transient_local latched).
-7. **Build** — full `colcon build --symlink-install --packages-select local_planner vehicle_simulator`.
+9. **Build** — full `colcon build --symlink-install --packages-select local_planner vehicle_simulator`.
 
 ## Out of Scope
 
 - Runtime route editing after cruise starts (route frozen).
 - YAML + RViz mixed sources.
+- TF conversion of mismatched RViz click frames (v1 rejects + WARN; RViz Fixed Frame must match `multi_frame` during collection).
 - Pause/resume, auto-start on boot, multi-route switching.
 - Changes to `localPlanner` / `pathFollower` travel logic or terrain stack.
+- Renaming `WAIT_LOCALIZATION` → `WAIT_POSE`.
