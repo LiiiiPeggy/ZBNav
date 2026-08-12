@@ -28,12 +28,24 @@ find_package(message_filters REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_ros REQUIRED)
 
+# ################################
+# CMake: find packages for multi-point cruise deps
+# ################################
+find_package(yaml-cpp REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+
 add_executable(localPlanner src/localPlanner.cpp)
 add_executable(pathFollower src/pathFollower.cpp)
 add_executable(cruiseController src/cruiseController.cpp)
 ament_target_dependencies(localPlanner rclcpp std_msgs sensor_msgs nav_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs message_filters pcl_ros pcl_conversions)
 ament_target_dependencies(pathFollower rclcpp std_msgs sensor_msgs nav_msgs geometry_msgs tf2 tf2_ros tf2_geometry_msgs message_filters pcl_ros pcl_conversions)
-ament_target_dependencies(cruiseController rclcpp geometry_msgs nav_msgs std_msgs)
+# ################################
+# CMake: extend cruiseController deps for multi-point cruise
+# ################################
+ament_target_dependencies(cruiseController rclcpp geometry_msgs nav_msgs std_msgs visualization_msgs std_srvs tf2 tf2_ros tf2_geometry_msgs ament_index_cpp)
+target_link_libraries(cruiseController yaml-cpp)
 
 install(TARGETS
   localPlanner
@@ -45,6 +57,15 @@ install(
   DIRECTORY
   launch
   paths
+  DESTINATION share/${PROJECT_NAME}
+)
+
+# ################################
+# CMake: install config dir for multi-point cruise
+# ################################
+install(
+  DIRECTORY
+  config
   DESTINATION share/${PROJECT_NAME}
 )
 

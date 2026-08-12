@@ -1,0 +1,12 @@
+# ################################
+# YAML: define default multi-point cruise route
+# ################################
+multi_cruise:
+  waypoints:
+    - x: 1.0
+      y: 0.0
+    - x: 5.0
+      y: 0.0
+    - x: 9.0
+      y: 0.0
+      turn_angle: 180.0
