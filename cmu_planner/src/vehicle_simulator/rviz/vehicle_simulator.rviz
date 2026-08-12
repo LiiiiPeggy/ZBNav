@@ -262,6 +262,24 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /way_point
       Value: true
+# ################################
+# YAML: add MarkerArray display for multi-waypoint markers
+# ################################
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MultiWaypoints
+      Namespaces:
+        wp_sphere: true
+        wp_text: true
+        route: true
+      Queue Size: 10
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /multi_waypoints
+      Value: true
     - Alpha: 1
       Class: rviz_default_plugins/Polygon
       Color: 0; 255; 0
@@ -511,6 +529,17 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: waypoint
+# ################################
+# YAML: add PublishPoint tool for multi-waypoint click
+# ################################
+    - Class: rviz_default_plugins/PublishPoint
+      Name: Publish Point
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /multi_waypoint_add
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
