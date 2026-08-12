@@ -18,6 +18,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 enum class CruiseState {
   IDLE = 0,
@@ -155,6 +156,13 @@ public:
       start_srv_ = this->create_service<std_srvs::srv::Trigger>(
         "/multi_start",
         std::bind(&CruiseController::startService, this, std::placeholders::_1, std::placeholders::_2));
+      // ################################
+      // C++: publish cruise autonomy lock for MULTI mode
+      // ################################
+      // localPlanner/pathFollower subscribe to release /joy control while
+      // MULTI runs; only MULTI ever publishes (SINGLE/REPEAT unaffected).
+      cruise_autonomy_pub_ = this->create_publisher<std_msgs::msg::Bool>(
+        "/cruise_autonomy", 10);
     }
 
     // ################################
@@ -316,6 +324,12 @@ private:
     closing_loop_ = false;
     pending_stop_ = false;
     active_goal_valid_ = false;
+    // Release the autonomy lock on MULTI abort (guard: REPEAT/SINGLE never lock)
+    if (multi_enabled_) {
+      std_msgs::msg::Bool autonomy_msg;
+      autonomy_msg.data = false;
+      cruise_autonomy_pub_->publish(autonomy_msg);
+    }
     RCLCPP_WARN(this->get_logger(),
       "[CRUISE] Stop received, cruise aborted");
     state_ = CruiseState::IDLE;
@@ -637,6 +651,10 @@ private:
             publishZeroCmd();
             RCLCPP_INFO(this->get_logger(),
               "[MULTI] Cruise complete after %d loops", completed_loops_);
+            // Release the autonomy lock when the finite loop count is reached
+            std_msgs::msg::Bool autonomy_msg;
+            autonomy_msg.data = false;
+            cruise_autonomy_pub_->publish(autonomy_msg);
             completed_loops_ = 0;
             closing_loop_ = false;
             state_ = CruiseState::IDLE;
@@ -948,6 +966,14 @@ private:
     res->success = true;
     res->message = "Starting multi cruise";
     RCLCPP_INFO(this->get_logger(), "[MULTI] /multi_start accepted; starting cruise");
+    // ################################
+    // C++: lock cruise autonomy before MULTI waypoints drive
+    // ################################
+    // With the lock set, localPlanner/pathFollower ignore /joy (real PS3
+    // controller jitter must not clear autonomyMode during MULTI).
+    std_msgs::msg::Bool autonomy_msg;
+    autonomy_msg.data = true;
+    cruise_autonomy_pub_->publish(autonomy_msg);
     beginMultiCruise();
   }
 
@@ -996,6 +1022,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_pub_;
   rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr add_sub_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_srv_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr cruise_autonomy_pub_;
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr waypoint_sub_;

@@ -14,6 +14,10 @@
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/int8.hpp>
+// ################################
+// C++: include bool message for cruise autonomy lock
+// ################################
+#include <std_msgs/msg/bool.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <sensor_msgs/msg/imu.h>
@@ -69,6 +73,10 @@ bool noRotAtGoal = true;
 bool autonomyMode = false;
 double autonomySpeed = 1.0;
 double joyToSpeedDelay = 2.0;
+// ################################
+// C++: add cruise autonomy lock flag
+// ################################
+bool cruise_autonomy_ = false;
 
 float joySpeed = 0;
 float joySpeedRaw = 0;
@@ -148,9 +156,35 @@ void pathHandler(const nav_msgs::msg::Path::ConstSharedPtr pathIn)
   pathInit = true;
 }
 
+// ################################
+// C++: lock or release cruise autonomy on /cruise_autonomy
+// ################################
+void cruiseAutonomyHandler(const std_msgs::msg::Bool::ConstSharedPtr msg)
+{
+  cruise_autonomy_ = msg->data;
+
+  if (cruise_autonomy_) {
+    autonomyMode = true;
+    joySpeedRaw = 0.0;
+    joySpeed = autonomySpeed / maxSpeed;
+    joyYaw = 0.0;
+  } else {
+    autonomyMode = false;
+    joySpeedRaw = 0.0;
+    joySpeed = 0.0;
+    joyYaw = 0.0;
+  }
+}
+
 void joystickHandler(const sensor_msgs::msg::Joy::ConstSharedPtr joy)
 {
-  joyTime = nh->now().seconds(); 
+  // ################################
+  // C++: ignore joystick while cruise autonomy is locked
+  // ################################
+  if (cruise_autonomy_) {
+    return;
+  }
+  joyTime = nh->now().seconds();
   joySpeedRaw = sqrt(joy->axes[3] * joy->axes[3] + joy->axes[4] * joy->axes[4]);
   joySpeed = joySpeedRaw;
   if (joySpeed > 1.0) joySpeed = 1.0;
@@ -262,6 +296,11 @@ int main(int argc, char** argv)
   auto subSpeed = nh->create_subscription<std_msgs::msg::Float32>("/speed", 5, speedHandler);
 
   auto subStop = nh->create_subscription<std_msgs::msg::Int8>("/stop", 5, stopHandler);
+
+  // ################################
+  // C++: subscribe cruise autonomy lock topic
+  // ################################
+  auto subCruiseAutonomy = nh->create_subscription<std_msgs::msg::Bool>("/cruise_autonomy", 5, cruiseAutonomyHandler);
 
   auto pubSpeed = nh->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 5);
 

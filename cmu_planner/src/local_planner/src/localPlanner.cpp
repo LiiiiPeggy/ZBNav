@@ -81,6 +81,10 @@ bool autonomyMode = false;
 double autonomySpeed = 1.0;
 double joyToSpeedDelay = 2.0;
 double joyToCheckObstacleDelay = 5.0;
+// ################################
+// C++: add cruise autonomy lock flag
+// ################################
+bool cruise_autonomy_ = false;
 double goalClearRange = 0.5;
 double goalX = 0;
 double goalY = 0;
@@ -216,8 +220,35 @@ void terrainCloudHandler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr ter
   }
 }
 
+// ################################
+// C++: lock or release cruise autonomy on /cruise_autonomy
+// ################################
+void cruiseAutonomyHandler(const std_msgs::msg::Bool::ConstSharedPtr msg)
+{
+  cruise_autonomy_ = msg->data;
+
+  if (cruise_autonomy_) {
+    autonomyMode = true;
+    joySpeedRaw = 0.0;
+    joySpeed = autonomySpeed / maxSpeed;
+
+    if (joySpeed < 0.0) joySpeed = 0.0;
+    else if (joySpeed > 1.0) joySpeed = 1.0;
+  } else {
+    autonomyMode = false;
+    joySpeedRaw = 0.0;
+    joySpeed = 0.0;
+  }
+}
+
 void joystickHandler(const sensor_msgs::msg::Joy::ConstSharedPtr joy)
 {
+  // ################################
+  // C++: ignore joystick while cruise autonomy is locked
+  // ################################
+  if (cruise_autonomy_) {
+    return;
+  }
   joyTime = nh->now().seconds();
   joySpeedRaw = sqrt(joy->axes[3] * joy->axes[3] + joy->axes[4] * joy->axes[4]);
   joySpeed = joySpeedRaw;
@@ -601,6 +632,11 @@ int main(int argc, char** argv)
   auto subAddedObstacles = nh->create_subscription<sensor_msgs::msg::PointCloud2>("/added_obstacles", 5, addedObstaclesHandler);
 
   auto subCheckObstacle = nh->create_subscription<std_msgs::msg::Bool>("/check_obstacle", 5, checkObstacleHandler);
+
+  // ################################
+  // C++: subscribe cruise autonomy lock topic
+  // ################################
+  auto subCruiseAutonomy = nh->create_subscription<std_msgs::msg::Bool>("/cruise_autonomy", 5, cruiseAutonomyHandler);
 
   auto pubPath = nh->create_publisher<nav_msgs::msg::Path>("/path", 5);
   nav_msgs::msg::Path path;
