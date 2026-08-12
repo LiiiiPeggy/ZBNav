@@ -443,26 +443,34 @@ private:
     // ################################
     // C++: MULTI localization gate dispatch
     // ################################
-    // MULTI: localization gate
+    // MULTI: pose gate — odom mode needs only /state_estimation (no map,
+    // no relocalization); map mode additionally waits for the relocalization TF.
     if (multi_enabled_ && state_ == CruiseState::WAIT_LOCALIZATION) {
-      if (has_odom_ && tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
-        RCLCPP_INFO(this->get_logger(),
-          "[MULTI] Localization ready (odom→map TF available), proceeding");
-        if (multi_source_ == "yaml") {
-          if (waypoints_.size() >= 2) {
-            beginMultiCruise();
-          } else {
-            state_ = CruiseState::IDLE;
-          }
+      if (!has_odom_) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Waiting for /state_estimation...");
+        return;
+      }
+      if (multi_frame_ == "map" &&
+          !tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Waiting for odom->map TF (map mode)...");
+        return;
+      }
+      RCLCPP_INFO(this->get_logger(),
+        "[MULTI] Pose ready (frame=%s), proceeding", multi_frame_.c_str());
+      if (multi_source_ == "yaml") {
+        if (waypoints_.size() >= 2) {
+          beginMultiCruise();
         } else {
-          state_ = CruiseState::COLLECTING_WAYPOINTS;
-          RCLCPP_INFO(this->get_logger(),
-            "[MULTI] RViz mode: click waypoints, then call /multi_start");
-          publishMarkers();
+          state_ = CruiseState::IDLE;
         }
       } else {
-        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-          "[MULTI] Waiting for localization/TF...");
+        state_ = CruiseState::COLLECTING_WAYPOINTS;
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] RViz mode: click waypoints (RViz Fixed Frame must be '%s'), then call /multi_start",
+          multi_frame_.c_str());
+        publishMarkers();
       }
       return;
     }
