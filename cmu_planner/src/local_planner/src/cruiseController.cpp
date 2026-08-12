@@ -364,6 +364,21 @@ private:
     return true;
   }
 
+  // ################################
+  // C++: seize /cmd_vel from pathFollower for MULTI turns and waits
+  // ################################
+  // Publish /stop=2 to seize /cmd_vel from pathFollower, but FIRST set
+  // ignore_next_internal_stop_ so the node's own /stop=2 is not mistaken
+  // for an external stop. turning_internal_ is deliberately NOT set, so an
+  // external /stop=2 still aborts immediately in any MULTI state.
+  void seizeControlForMulti()
+  {
+    ignore_next_internal_stop_ = true;
+    auto stop_msg = std_msgs::msg::Int8();
+    stop_msg.data = 2;
+    stop_pub_->publish(stop_msg);
+  }
+
   void publishTurnCmd()
   {
     double yaw_error = normalizeAngle(target_yaw_ - current_yaw_);
@@ -526,6 +541,88 @@ private:
         publishTurnCmd();
       }
       return;
+
+    // ################################
+    // C++: add MULTI running state cases
+    // ################################
+    case CruiseState::GO_TO_WAYPOINT: {
+      if (!active_goal_valid_) {
+        startNextWaypoint();
+        return;
+      }
+      double dx = current_x_ - gx_odom_;
+      double dy = current_y_ - gy_odom_;
+      double goal_clear_range = this->get_parameter("goal_clear_range").as_double();
+      if (dx * dx + dy * dy < goal_clear_range * goal_clear_range) {
+        active_goal_valid_ = false;
+        // seize /cmd_vel BEFORE any turn/wait; publishZeroCmd to hold still
+        seizeControlForMulti();
+        publishZeroCmd();
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] Reached WP%zu", waypoint_index_);
+
+        const Waypoint & w = waypoints_[waypoint_index_];
+        if (fabs(w.turn_angle) > 1e-3) {
+          RCLCPP_INFO(this->get_logger(),
+            "[MULTI] Turning %.0f deg at WP%zu", w.turn_angle, waypoint_index_);
+          target_yaw_ = normalizeAngle(current_yaw_ + w.turn_angle * M_PI / 180.0);
+          state_ = CruiseState::TURN_AT_WAYPOINT;
+        } else {
+          wait_start_time_ = this->now().seconds();
+          state_ = CruiseState::WAIT_AT_WAYPOINT;
+        }
+      }
+      return;
+    }
+
+    case CruiseState::TURN_AT_WAYPOINT: {
+      if (turnDone()) {
+        publishZeroCmd();
+        wait_start_time_ = this->now().seconds();
+        state_ = CruiseState::WAIT_AT_WAYPOINT;
+        RCLCPP_INFO(this->get_logger(), "[MULTI] Turn done at WP%zu", waypoint_index_);
+      } else {
+        publishTurnCmd();
+      }
+      return;
+    }
+
+    case CruiseState::WAIT_AT_WAYPOINT: {
+      const Waypoint & w = waypoints_[waypoint_index_];
+      double elapsed = this->now().seconds() - wait_start_time_;
+      if (elapsed >= w.wait_time) {
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] Wait done at WP%zu (%.1fs), advancing", waypoint_index_, w.wait_time);
+
+        // ################################
+        // C++: count a closed loop only after arriving at WP0 and finishing its wait
+        // ################################
+        // One round = physically drive WPN→WP0, arrive at WP0, and finish WP0's
+        // turn/wait. Only then completed_loops_++. loop_count=1 must end parked at WP0.
+        if (waypoint_index_ == 0 && closing_loop_) {
+          completed_loops_++;
+          bool done = (loop_count_ > 0 && completed_loops_ >= loop_count_);
+          RCLCPP_INFO(this->get_logger(),
+            "[MULTI] Loop %d/%s complete at WP0", completed_loops_,
+            (loop_count_ > 0 ? std::to_string(loop_count_).c_str() : "inf"));
+          if (done) {
+            publishZeroCmd();
+            RCLCPP_INFO(this->get_logger(),
+              "[MULTI] Cruise complete after %d loops", completed_loops_);
+            completed_loops_ = 0;
+            closing_loop_ = false;
+            state_ = CruiseState::IDLE;
+            return;
+          }
+          closing_loop_ = false;
+        }
+
+        advanceWaypoint();
+      } else {
+        publishZeroCmd();  // keep robot still; pathFollower already stopped via /stop=2
+      }
+      return;
+    }
     }
   }
 
@@ -722,6 +819,11 @@ private:
     RCLCPP_INFO(this->get_logger(),
       "[MULTI][WAYPOINT] publish /way_point (odom): x=%.3f, y=%.3f", x, y);
   }
+
+  // ################################
+  // C++: declare advanceWaypoint (implemented in Task 6)
+  // ################################
+  void advanceWaypoint();
 
   // ################################
   // C++: handle RViz waypoint add and start service
