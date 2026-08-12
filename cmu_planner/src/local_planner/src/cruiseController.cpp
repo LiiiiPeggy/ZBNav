@@ -163,6 +163,8 @@ public:
     // MULTI mode setup — MUST be after markers_pub_ creation (Step 7)
     // BOTH sources enter WAIT_LOCALIZATION first; Task 4's gate then dispatches
     // to beginMultiCruise() (yaml) or COLLECTING_WAYPOINTS (rviz).
+    // The gate requires /state_estimation always, and the relocalization TF
+    // only when multi_frame_=="map".
     if (multi_enabled_) {
       if (multi_source_ == "yaml") {
         loadYaml();
@@ -173,7 +175,7 @@ public:
         }
       } else {
         RCLCPP_INFO(this->get_logger(),
-          "[MULTI] RViz mode: waiting for localization, then collect waypoints");
+          "[MULTI] RViz mode: waiting for pose, then collect waypoints");
       }
       state_ = CruiseState::WAIT_LOCALIZATION;
       publishMarkers();
@@ -690,7 +692,8 @@ private:
         waypoints_.push_back(w);
       }
       RCLCPP_INFO(this->get_logger(),
-        "[MULTI] Loaded %zu waypoints from %s", waypoints_.size(), multi_route_file_.c_str());
+        "[MULTI] Loaded %zu waypoints from %s (frame=%s)",
+        waypoints_.size(), multi_route_file_.c_str(), multi_frame_.c_str());
     } catch (const std::exception & e) {
       RCLCPP_ERROR(this->get_logger(),
         "[MULTI] Failed to load %s: %s", multi_route_file_.c_str(), e.what());
@@ -705,7 +708,7 @@ private:
     visualization_msgs::msg::MarkerArray arr;
     auto header = [this]() {
       std_msgs::msg::Header h;
-      h.frame_id = "map";
+      h.frame_id = multi_frame_;
       h.stamp = this->now();
       return h;
     };
@@ -786,8 +789,8 @@ private:
     completed_loops_ = 0;
     closing_loop_ = false;
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Cruise started: %zu waypoints, loop_count=%d",
-      waypoints_.size(), loop_count_);
+      "[MULTI] Cruise started: %zu waypoints, loop_count=%d, frame=%s",
+      waypoints_.size(), loop_count_, multi_frame_.c_str());
     startNextWaypoint();
   }
 
@@ -798,22 +801,30 @@ private:
       state_ = CruiseState::IDLE;
       return;
     }
-    // Enter GO_TO_WAYPOINT FIRST and clear active_goal_valid_ BEFORE the TF
-    // transform, so that if lookup fails the controlLoop retries next tick
-    // (GO_TO_WAYPOINT sees active_goal_valid_==false and calls startNextWaypoint()).
+    // Enter GO_TO_WAYPOINT FIRST and clear active_goal_valid_ BEFORE any
+    // coordinate work, so that if map-mode transform fails the controlLoop
+    // retries next tick (GO_TO_WAYPOINT sees active_goal_valid_==false and
+    // calls startNextWaypoint()).
     state_ = CruiseState::GO_TO_WAYPOINT;
     active_goal_valid_ = false;
 
     const Waypoint & w = waypoints_[waypoint_index_];
-    if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-        "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
-      return;  // stay in GO_TO_WAYPOINT, retry on next tick
+    if (multi_frame_ == "odom") {
+      // odom mode (default): waypoint coordinates ARE odom coordinates.
+      // No TF, no map, no relocalization required.
+      gx_odom_ = w.x;
+      gy_odom_ = w.y;
+    } else {  // multi_frame_ == "map"
+      if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
+        return;  // stay in GO_TO_WAYPOINT, retry on next tick
+      }
     }
     active_goal_valid_ = true;
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Going to WP%zu: map=(%.3f, %.3f) odom=(%.3f, %.3f)",
-      waypoint_index_, w.x, w.y, gx_odom_, gy_odom_);
+      "[MULTI] Going to WP%zu: (%s frame) (%.3f, %.3f) -> odom (%.3f, %.3f)",
+      waypoint_index_, multi_frame_.c_str(), w.x, w.y, gx_odom_, gy_odom_);
     sendMultiWaypointAndGo(gx_odom_, gy_odom_);
     publishMarkers();
   }
@@ -871,6 +882,14 @@ private:
         "[MULTI] Route already started; RViz waypoint ignored");
       return;
     }
+    // v1: no TF conversion of clicks — the click frame must equal
+    // multi_frame_ (RViz Fixed Frame must be set to multi_frame_).
+    if (msg->header.frame_id != multi_frame_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+        "[MULTI] Waypoint frame '%s' != multi_frame '%s'; set RViz Fixed Frame to '%s' and re-click",
+        msg->header.frame_id.c_str(), multi_frame_.c_str(), multi_frame_.c_str());
+      return;
+    }
     Waypoint w;
     w.x = msg->point.x;
     w.y = msg->point.y;
@@ -879,8 +898,8 @@ private:
     waypoints_.push_back(w);
     publishMarkers();
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Added WP%zu at (%.3f, %.3f); %zu total",
-      waypoints_.size() - 1, w.x, w.y, waypoints_.size());
+      "[MULTI] Added WP%zu at (%.3f, %.3f) in %s frame; %zu total",
+      waypoints_.size() - 1, w.x, w.y, multi_frame_.c_str(), waypoints_.size());
   }
 
   void startService(
@@ -901,8 +920,19 @@ private:
       RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
       return;
     }
-    // Re-check localization TF before starting
-    if (!tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+    if (!has_odom_) {
+      res->success = false;
+      res->message = "/state_estimation not available";
+      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+      return;
+    }
+    // ################################
+    // C++: gate /multi_start on relocalization TF only in map mode
+    // ################################
+    // odom mode starts with /state_estimation only; map mode additionally
+    // needs the relocalization TF (re-checked at start time).
+    if (multi_frame_ == "map" &&
+        !tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
       res->success = false;
       res->message = "odom->map TF not available";
       RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
