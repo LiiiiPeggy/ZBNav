@@ -824,8 +824,7 @@ private:
       gy_odom_ = w.y;
     } else {  // multi_frame_ == "map"
       if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
-        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-          "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
+        // transformToOdom() already logs the throttled failure detail
         return;  // stay in GO_TO_WAYPOINT, retry on next tick
       }
     }
