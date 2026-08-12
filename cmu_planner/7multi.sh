@@ -20,6 +20,7 @@ if [[ "$mode" != "yaml" && "$mode" != "rviz" ]]; then
   echo "  bash 7multi.sh rviz 3      # RViz clicks, odom frame, 3 loops"
   echo "  bash 7multi.sh yaml -1 map # YAML route in prebuilt map frame (needs Odin relocalization)"
   echo "  bash 7multi.sh rviz -1 map # RViz clicks in map frame (needs Odin relocalization)"
+  # map mode: set RViz Fixed Frame to 'map' before clicking waypoints (odom-frame clicks are rejected)
   exit 1
 fi
 
