@@ -405,6 +405,33 @@ private:
     double goal_clear_range = this->get_parameter("goal_clear_range").as_double();
     double goal_clear_range_sq = goal_clear_range * goal_clear_range;
 
+    // ################################
+    // C++: MULTI localization gate dispatch
+    // ################################
+    // MULTI: localization gate
+    if (multi_enabled_ && state_ == CruiseState::WAIT_LOCALIZATION) {
+      if (has_odom_ && tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] Localization ready (odom→map TF available), proceeding");
+        if (multi_source_ == "yaml") {
+          if (waypoints_.size() >= 2) {
+            beginMultiCruise();
+          } else {
+            state_ = CruiseState::IDLE;
+          }
+        } else {
+          state_ = CruiseState::COLLECTING_WAYPOINTS;
+          RCLCPP_INFO(this->get_logger(),
+            "[MULTI] RViz mode: click waypoints, then call /multi_start");
+          publishMarkers();
+        }
+      } else {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+          "[MULTI] Waiting for localization/TF...");
+      }
+      return;
+    }
+
     switch (state_) {
     case CruiseState::IDLE:
       return;
