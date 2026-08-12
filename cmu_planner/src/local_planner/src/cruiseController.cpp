@@ -800,6 +800,24 @@ private:
     publishMarkers();
   }
 
+  // ################################
+  // C++: advance waypoint index with closing_loop_ wrap
+  // ################################
+  // Advance the index. When wrapping past the last waypoint, set
+  // closing_loop_=true so the arriving-at-WP0 logic (Task 5's WAIT_AT_WAYPOINT
+  // completion) knows this WP0 arrival closes a round. This function does NOT
+  // count loops — counting happens only after the robot physically arrives at
+  // WP0 AND finishes WP0's turn/wait (see Task 5 Step 3).
+  void advanceWaypoint()
+  {
+    waypoint_index_++;
+    if (waypoint_index_ >= waypoints_.size()) {
+      waypoint_index_ = 0;
+      closing_loop_ = true;
+    }
+    startNextWaypoint();
+  }
+
   // MULTI publishes /way_point with frame_id="odom" (unlike SINGLE/REPEAT's
   // sendWaypointAndGo which hardcodes frame_id="map"). SINGLE/REPEAT untouched.
   void sendMultiWaypointAndGo(double x, double y)
@@ -819,11 +837,6 @@ private:
     RCLCPP_INFO(this->get_logger(),
       "[MULTI][WAYPOINT] publish /way_point (odom): x=%.3f, y=%.3f", x, y);
   }
-
-  // ################################
-  // C++: declare advanceWaypoint (implemented in Task 6)
-  // ################################
-  void advanceWaypoint();
 
   // ################################
   // C++: handle RViz waypoint add and start service
