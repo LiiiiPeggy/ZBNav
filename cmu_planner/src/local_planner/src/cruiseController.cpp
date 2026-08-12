@@ -49,6 +49,11 @@ class CruiseController : public rclcpp::Node
 public:
   CruiseController()
   : Node("cruise_controller"),
+    // ################################
+    // C++: init tf2 buffer and listener
+    // ################################
+    tf_buffer_(this->get_clock()),
+    tf_listener_(tf_buffer_),
     state_(CruiseState::IDLE),
     has_odom_(false),
     start_x_(0.0), start_y_(0.0),
@@ -123,6 +128,42 @@ public:
       stop_sub_ = this->create_subscription<std_msgs::msg::Int8>(
         "/stop", 10,
         std::bind(&CruiseController::stopCallback, this, std::placeholders::_1));
+    }
+
+    // ################################
+    // C++: create MULTI marker pub sub and service
+    // ################################
+    if (multi_enabled_) {
+      markers_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+        "/multi_waypoints", rclcpp::QoS(10).reliable().transient_local());
+      add_sub_ = this->create_subscription<geometry_msgs::msg::PointStamped>(
+        "/multi_waypoint_add", 10,
+        std::bind(&CruiseController::addWaypointCallback, this, std::placeholders::_1));
+      start_srv_ = this->create_service<std_srvs::srv::Trigger>(
+        "/multi_start",
+        std::bind(&CruiseController::startService, this, std::placeholders::_1, std::placeholders::_2));
+    }
+
+    // ################################
+    // C++: MULTI setup enter WAIT_LOCALIZATION
+    // ################################
+    // MULTI mode setup — MUST be after markers_pub_ creation (Step 7)
+    // BOTH sources enter WAIT_LOCALIZATION first; Task 4's gate then dispatches
+    // to beginMultiCruise() (yaml) or COLLECTING_WAYPOINTS (rviz).
+    if (multi_enabled_) {
+      if (multi_source_ == "yaml") {
+        loadYaml();
+        if (waypoints_.size() < 2) {
+          RCLCPP_ERROR(this->get_logger(),
+            "[MULTI] multi_route.yaml has <2 waypoints (%zu); staying IDLE",
+            waypoints_.size());
+        }
+      } else {
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] RViz mode: waiting for localization, then collect waypoints");
+      }
+      state_ = CruiseState::WAIT_LOCALIZATION;
+      publishMarkers();
     }
 
     waypoint_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>(
@@ -461,6 +502,266 @@ private:
     }
   }
 
+  // ################################
+  // C++: transform map waypoint to odom frame
+  // ################################
+  bool transformToOdom(double mx, double my, double & ox, double & oy)
+  {
+    try {
+      // Explicit lookup + doTransform (NOT buffer_.transform), and do NOT set
+      // header.stamp to tf2::TimePointZero — use the lookup's own timepoint.
+      geometry_msgs::msg::TransformStamped t_map_odom =
+        tf_buffer_.lookupTransform("odom", "map", tf2::TimePointZero);
+
+      geometry_msgs::msg::PointStamped map_pt;
+      map_pt.header.frame_id = "map";
+      map_pt.point.x = mx;
+      map_pt.point.y = my;
+      map_pt.point.z = 0.0;
+
+      geometry_msgs::msg::PointStamped odom_pt;
+      tf2::doTransform(map_pt, odom_pt, t_map_odom);
+      ox = odom_pt.point.x;
+      oy = odom_pt.point.y;
+      return true;
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+        "[MULTI] TF transform failed: %s", e.what());
+      return false;
+    }
+  }
+
+  // ################################
+  // C++: load multi waypoints from yaml
+  // ################################
+  void loadYaml()
+  {
+    try {
+      YAML::Node root = YAML::LoadFile(multi_route_file_);
+      YAML::Node wps = root["multi_cruise"]["waypoints"];
+      for (const auto & wp : wps) {
+        Waypoint w;
+        w.x = wp["x"].as<double>();
+        w.y = wp["y"].as<double>();
+        w.turn_angle = wp["turn_angle"] ? wp["turn_angle"].as<double>() : 0.0;
+        w.wait_time = wp["wait_time"] ? wp["wait_time"].as<double>() : default_wait_time_;
+        waypoints_.push_back(w);
+      }
+      RCLCPP_INFO(this->get_logger(),
+        "[MULTI] Loaded %zu waypoints from %s", waypoints_.size(), multi_route_file_.c_str());
+    } catch (const std::exception & e) {
+      RCLCPP_ERROR(this->get_logger(),
+        "[MULTI] Failed to load %s: %s", multi_route_file_.c_str(), e.what());
+    }
+  }
+
+  // ################################
+  // C++: publish MULTI route and waypoint markers
+  // ################################
+  void publishMarkers()
+  {
+    visualization_msgs::msg::MarkerArray arr;
+    auto header = [this]() {
+      std_msgs::msg::Header h;
+      h.frame_id = "map";
+      h.stamp = this->now();
+      return h;
+    };
+
+    // LINE_STRIP connecting all waypoints (closed loop: last→first)
+    visualization_msgs::msg::Marker line;
+    line.header = header();
+    line.ns = "route";
+    line.id = 0;
+    line.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    line.action = visualization_msgs::msg::Marker::ADD;
+    line.scale.x = 0.05;
+    line.color.r = 1.0f; line.color.g = 1.0f; line.color.b = 0.0f; line.color.a = 1.0f;
+    line.pose.orientation.w = 1.0;
+    for (const auto & w : waypoints_) {
+      geometry_msgs::msg::Point p;
+      p.x = w.x; p.y = w.y; p.z = 0.0;
+      line.points.push_back(p);
+    }
+    if (waypoints_.size() >= 2) {
+      geometry_msgs::msg::Point p0;
+      p0.x = waypoints_[0].x; p0.y = waypoints_[0].y; p0.z = 0.0;
+      line.points.push_back(p0);  // close the loop
+    }
+    arr.markers.push_back(line);
+
+    for (size_t i = 0; i < waypoints_.size(); i++) {
+      // SPHERE
+      visualization_msgs::msg::Marker sphere;
+      sphere.header = header();
+      sphere.ns = "wp_sphere";
+      sphere.id = static_cast<int>(i);
+      sphere.type = visualization_msgs::msg::Marker::SPHERE;
+      sphere.action = visualization_msgs::msg::Marker::ADD;
+      sphere.pose.position.x = waypoints_[i].x;
+      sphere.pose.position.y = waypoints_[i].y;
+      sphere.pose.position.z = 0.0;
+      sphere.pose.orientation.w = 1.0;
+      sphere.scale.x = 0.4; sphere.scale.y = 0.4; sphere.scale.z = 0.4;
+      // highlight current
+      bool is_current = (multi_enabled_ && state_ == CruiseState::GO_TO_WAYPOINT &&
+                         i == waypoint_index_);
+      if (is_current) {
+        sphere.color.r = 0.0f; sphere.color.g = 1.0f; sphere.color.b = 0.0f;
+        sphere.scale.x = sphere.scale.y = sphere.scale.z = 0.7;
+      } else {
+        sphere.color.r = 1.0f; sphere.color.g = 1.0f; sphere.color.b = 1.0f;
+      }
+      sphere.color.a = 1.0f;
+      arr.markers.push_back(sphere);
+
+      // TEXT_VIEW_FACING
+      visualization_msgs::msg::Marker text;
+      text.header = header();
+      text.ns = "wp_text";
+      text.id = static_cast<int>(i);
+      text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+      text.action = visualization_msgs::msg::Marker::ADD;
+      text.pose.position.x = waypoints_[i].x;
+      text.pose.position.y = waypoints_[i].y;
+      text.pose.position.z = 0.6;
+      text.pose.orientation.w = 1.0;
+      text.scale.z = 0.5;
+      text.color.r = 0.0f; text.color.g = 1.0f; text.color.b = 1.0f; text.color.a = 1.0f;
+      text.text = "WP" + std::to_string(i);
+      arr.markers.push_back(text);
+    }
+
+    markers_pub_->publish(arr);
+  }
+
+  // ################################
+  // C++: implement MULTI cruise start sequence
+  // ################################
+  void beginMultiCruise()
+  {
+    waypoint_index_ = 0;
+    completed_loops_ = 0;
+    closing_loop_ = false;
+    RCLCPP_INFO(this->get_logger(),
+      "[MULTI] Cruise started: %zu waypoints, loop_count=%d",
+      waypoints_.size(), loop_count_);
+    startNextWaypoint();
+  }
+
+  void startNextWaypoint()
+  {
+    if (waypoint_index_ >= waypoints_.size()) {
+      RCLCPP_ERROR(this->get_logger(), "[MULTI] waypoint_index_ out of range");
+      state_ = CruiseState::IDLE;
+      return;
+    }
+    // Enter GO_TO_WAYPOINT FIRST and clear active_goal_valid_ BEFORE the TF
+    // transform, so that if lookup fails the controlLoop retries next tick
+    // (GO_TO_WAYPOINT sees active_goal_valid_==false and calls startNextWaypoint()).
+    state_ = CruiseState::GO_TO_WAYPOINT;
+    active_goal_valid_ = false;
+
+    const Waypoint & w = waypoints_[waypoint_index_];
+    if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
+      RCLCPP_WARN(this->get_logger(),
+        "[MULTI] Cannot transform WP%zu to odom; retrying next tick", waypoint_index_);
+      return;  // stay in GO_TO_WAYPOINT, retry on next tick
+    }
+    active_goal_valid_ = true;
+    RCLCPP_INFO(this->get_logger(),
+      "[MULTI] Going to WP%zu: map=(%.3f, %.3f) odom=(%.3f, %.3f)",
+      waypoint_index_, w.x, w.y, gx_odom_, gy_odom_);
+    sendMultiWaypointAndGo(gx_odom_, gy_odom_);
+    publishMarkers();
+  }
+
+  // MULTI publishes /way_point with frame_id="odom" (unlike SINGLE/REPEAT's
+  // sendWaypointAndGo which hardcodes frame_id="map"). SINGLE/REPEAT untouched.
+  void sendMultiWaypointAndGo(double x, double y)
+  {
+    geometry_msgs::msg::PointStamped wp;
+    wp.header.stamp = this->now();
+    wp.header.frame_id = "odom";
+    wp.point.x = x;
+    wp.point.y = y;
+    wp.point.z = 0.0;
+    waypoint_pub_->publish(wp);
+
+    auto stop_msg = std_msgs::msg::Int8();
+    stop_msg.data = 0;
+    stop_pub_->publish(stop_msg);
+
+    RCLCPP_INFO(this->get_logger(),
+      "[MULTI][WAYPOINT] publish /way_point (odom): x=%.3f, y=%.3f", x, y);
+  }
+
+  // ################################
+  // C++: handle RViz waypoint add and start service
+  // ################################
+  void addWaypointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
+  {
+    if (multi_source_ == "yaml") {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+        "[MULTI] Ignoring RViz waypoint because multi_source=yaml");
+      return;
+    }
+    if (state_ != CruiseState::COLLECTING_WAYPOINTS) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+        "[MULTI] Route already started; RViz waypoint ignored");
+      return;
+    }
+    Waypoint w;
+    w.x = msg->point.x;
+    w.y = msg->point.y;
+    w.turn_angle = 0.0;
+    w.wait_time = default_wait_time_;
+    waypoints_.push_back(w);
+    publishMarkers();
+    RCLCPP_INFO(this->get_logger(),
+      "[MULTI] Added WP%zu at (%.3f, %.3f); %zu total",
+      waypoints_.size() - 1, w.x, w.y, waypoints_.size());
+  }
+
+  void startService(
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> req,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> res)
+  {
+    (void)req;
+    // /multi_start is only valid in rviz mode + COLLECTING_WAYPOINTS state
+    if (multi_source_ != "rviz" || state_ != CruiseState::COLLECTING_WAYPOINTS) {
+      res->success = false;
+      res->message = "/multi_start only valid in rviz COLLECTING_WAYPOINTS";
+      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+      return;
+    }
+    if (waypoints_.size() < 2) {
+      res->success = false;
+      res->message = "At least 2 waypoints are required";
+      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+      return;
+    }
+    // Re-check localization TF before starting
+    if (!tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+      res->success = false;
+      res->message = "odom->map TF not available";
+      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+      return;
+    }
+    res->success = true;
+    res->message = "Starting multi cruise";
+    RCLCPP_INFO(this->get_logger(), "[MULTI] /multi_start accepted; starting cruise");
+    beginMultiCruise();
+  }
+
+  // ################################
+  // C++: add tf2 buffer and listener members
+  // ################################
+  // Declared before state_ so init order matches the member-init list
+  // (tf_buffer_ before tf_listener_; listener needs a live buffer).
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
+
   CruiseState state_;
   bool has_odom_;
   double turn_angle_;
@@ -490,6 +791,13 @@ private:
   double gx_odom_ = 0.0, gy_odom_ = 0.0;
   bool active_goal_valid_ = false;
   double wait_start_time_ = 0.0;
+
+  // ################################
+  // C++: add MULTI marker pub sub and service members
+  // ################################
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_pub_;
+  rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr add_sub_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr start_srv_;
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr waypoint_sub_;
