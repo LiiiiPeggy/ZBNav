@@ -76,6 +76,7 @@ public:
     // ################################
     this->declare_parameter<bool>("multi_enabled", false);
     this->declare_parameter<std::string>("multi_source", "yaml");
+    this->declare_parameter<std::string>("multi_frame", "odom");
     this->declare_parameter<std::string>("multi_route_file", "");
     this->declare_parameter<double>("default_wait_time", 2.0);
 
@@ -89,6 +90,7 @@ public:
     // ################################
     multi_enabled_ = this->get_parameter("multi_enabled").as_bool();
     multi_source_ = this->get_parameter("multi_source").as_string();
+    multi_frame_ = this->get_parameter("multi_frame").as_string();
     std::string mrf = this->get_parameter("multi_route_file").as_string();
     multi_route_file_ = mrf.empty()
       ? ament_index_cpp::get_package_share_directory("local_planner") + "/config/multi_route.yaml"
@@ -100,6 +102,13 @@ public:
       RCLCPP_ERROR(this->get_logger(),
         "[MULTI] Invalid multi_source='%s' (must be 'yaml' or 'rviz')", multi_source_.c_str());
       throw std::runtime_error("Invalid multi_source");
+    }
+
+    // Validate multi_frame
+    if (multi_frame_ != "odom" && multi_frame_ != "map") {
+      RCLCPP_ERROR(this->get_logger(),
+        "[MULTI] Invalid multi_frame='%s' (must be 'odom' or 'map')", multi_frame_.c_str());
+      throw std::runtime_error("Invalid multi_frame");
     }
 
     // multi + repeat is an invalid combination
@@ -937,6 +946,7 @@ private:
   bool closing_loop_ = false;
   bool multi_enabled_ = false;
   std::string multi_source_;
+  std::string multi_frame_;
   std::string multi_route_file_;
   double default_wait_time_ = 2.0;
   double gx_odom_ = 0.0, gy_odom_ = 0.0;
