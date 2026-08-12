@@ -124,7 +124,11 @@ public:
       "/way_point_cruise", 10,
       std::bind(&CruiseController::waypointCallback, this, std::placeholders::_1));
 
-    if (this->get_parameter("repeat_enabled").as_bool()) {
+    // ################################
+    // C++: subscribe /stop in MULTI mode too
+    // ################################
+    if (this->get_parameter("repeat_enabled").as_bool() ||
+        this->get_parameter("multi_enabled").as_bool()) {
       stop_sub_ = this->create_subscription<std_msgs::msg::Int8>(
         "/stop", 10,
         std::bind(&CruiseController::stopCallback, this, std::placeholders::_1));
@@ -293,11 +297,16 @@ private:
         "[REPEAT] External stop queued during turn");
       return;
     }
+    // ################################
+    // C++: reset MULTI state on external stop
+    // ################################
     publishZeroCmd();
     completed_loops_ = 0;
+    closing_loop_ = false;
     pending_stop_ = false;
+    active_goal_valid_ = false;
     RCLCPP_WARN(this->get_logger(),
-      "[REPEAT] Stop received, cruise aborted");
+      "[MULTI] Stop received, cruise aborted");
     state_ = CruiseState::IDLE;
   }
 
