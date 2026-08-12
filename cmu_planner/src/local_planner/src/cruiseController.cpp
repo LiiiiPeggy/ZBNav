@@ -6,12 +6,42 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/int8.hpp>
 
+// ################################
+// C++: add MULTI mode includes
+// ################################
+#include <vector>
+#include <yaml-cpp/yaml.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <std_srvs/srv/trigger.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 enum class CruiseState {
   IDLE = 0,
   GO_TO_DEST = 1,
   TURN_AT_DEST = 2,
   RETURN_TO_START = 3,
   TURN_AT_START = 4,
+  // ################################
+  // C++: extend state enum for MULTI states
+  // ################################
+  WAIT_LOCALIZATION = 5,
+  COLLECTING_WAYPOINTS = 6,
+  GO_TO_WAYPOINT = 7,
+  TURN_AT_WAYPOINT = 8,
+  WAIT_AT_WAYPOINT = 9,
+};
+
+// ################################
+// C++: add MULTI waypoint struct
+// ################################
+struct Waypoint {
+  double x, y;
+  double turn_angle = 0.0;
+  double wait_time = 2.0;
 };
 
 class CruiseController : public rclcpp::Node
@@ -36,10 +66,43 @@ public:
     this->declare_parameter<bool>("repeat_enabled", false);
     this->declare_parameter<int>("loop_count", -1);
 
+    // ################################
+    // C++: declare MULTI parameters
+    // ################################
+    this->declare_parameter<bool>("multi_enabled", false);
+    this->declare_parameter<std::string>("multi_source", "yaml");
+    this->declare_parameter<std::string>("multi_route_file", "");
+    this->declare_parameter<double>("default_wait_time", 2.0);
+
     turn_angle_ = this->get_parameter("turn_angle").as_double();
     min_yaw_rate_ = this->get_parameter("min_yaw_rate").as_double();
     repeat_enabled_ = this->get_parameter("repeat_enabled").as_bool();
     loop_count_ = this->get_parameter("loop_count").as_int();
+
+    // ################################
+    // C++: read MULTI parameters and validate
+    // ################################
+    multi_enabled_ = this->get_parameter("multi_enabled").as_bool();
+    multi_source_ = this->get_parameter("multi_source").as_string();
+    std::string mrf = this->get_parameter("multi_route_file").as_string();
+    multi_route_file_ = mrf.empty()
+      ? ament_index_cpp::get_package_share_directory("local_planner") + "/config/multi_route.yaml"
+      : mrf;
+    default_wait_time_ = this->get_parameter("default_wait_time").as_double();
+
+    // Validate multi_source
+    if (multi_source_ != "yaml" && multi_source_ != "rviz") {
+      RCLCPP_ERROR(this->get_logger(),
+        "[MULTI] Invalid multi_source='%s' (must be 'yaml' or 'rviz')", multi_source_.c_str());
+      throw std::runtime_error("Invalid multi_source");
+    }
+
+    // multi + repeat is an invalid combination
+    if (multi_enabled_ && repeat_enabled_) {
+      RCLCPP_ERROR(this->get_logger(),
+        "[MULTI] multi_enabled && repeat_enabled is invalid; refusing to start");
+      throw std::runtime_error("multi_enabled && repeat_enabled");
+    }
 
     // 防呆：loop_count 只接受 -1（无限）或正整数（趟数）
     if (loop_count_ == 0 || loop_count_ < -1) {
@@ -86,6 +149,14 @@ private:
       case CruiseState::TURN_AT_DEST: return "TURN_AT_DEST";
       case CruiseState::RETURN_TO_START: return "RETURN_TO_START";
       case CruiseState::TURN_AT_START: return "TURN_AT_START";
+      // ################################
+      // C++: name MULTI states
+      // ################################
+      case CruiseState::WAIT_LOCALIZATION: return "WAIT_LOCALIZATION";
+      case CruiseState::COLLECTING_WAYPOINTS: return "COLLECTING_WAYPOINTS";
+      case CruiseState::GO_TO_WAYPOINT: return "GO_TO_WAYPOINT";
+      case CruiseState::TURN_AT_WAYPOINT: return "TURN_AT_WAYPOINT";
+      case CruiseState::WAIT_AT_WAYPOINT: return "WAIT_AT_WAYPOINT";
       default: return "UNKNOWN";
     }
   }
@@ -117,6 +188,15 @@ private:
     if (!has_odom_) {
       RCLCPP_WARN(this->get_logger(),
         "No /state_estimation received, ignoring cruise waypoint");
+      return;
+    }
+
+    // ################################
+    // C++: ignore cruise waypoint in MULTI mode
+    // ################################
+    if (multi_enabled_) {
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+        "[MULTI] Ignoring /way_point_cruise in MULTI mode");
       return;
     }
 
@@ -394,6 +474,22 @@ private:
   double start_x_, start_y_, dest_x_, dest_y_;
   double current_x_, current_y_, current_yaw_;
   double target_yaw_;
+
+  // ################################
+  // C++: add MULTI state members
+  // ################################
+  // MULTI members
+  std::vector<Waypoint> waypoints_;
+  size_t waypoint_index_ = 0;
+  // completed_loops_ and loop_count_ ALREADY EXIST from REPEAT — reuse, do NOT redeclare
+  bool closing_loop_ = false;
+  bool multi_enabled_ = false;
+  std::string multi_source_;
+  std::string multi_route_file_;
+  double default_wait_time_ = 2.0;
+  double gx_odom_ = 0.0, gy_odom_ = 0.0;
+  bool active_goal_valid_ = false;
+  double wait_start_time_ = 0.0;
 
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr waypoint_sub_;
