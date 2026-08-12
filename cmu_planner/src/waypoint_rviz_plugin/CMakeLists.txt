@@ -30,6 +30,7 @@ set(CMAKE_AUTOMOC ON)
 
 set(HDR_FILES
     include/waypoint_tool.hpp
+    include/multi_waypoint_tool.hpp
 )
 
 foreach(header "${HDR_FILES}")
@@ -38,10 +39,15 @@ endforeach()
 
 set(HDR_FILES
     include/waypoint_tool.hpp
+    include/multi_waypoint_tool.hpp
 )
 
+# ################################
+# CMake: add MultiWaypointTool source
+# ################################
 set(SRC_FILES
   src/waypoint_tool.cpp
+  src/multi_waypoint_tool.cpp
 )
 
 include_directories(include)

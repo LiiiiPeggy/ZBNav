@@ -533,16 +533,10 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: waypoint
 # ################################
-# YAML: add PublishPoint tool for multi-waypoint click
+# YAML: add plane-based MULTI waypoint tool
 # ################################
-    - Class: rviz_default_plugins/PublishPoint
-      Name: Publish Point
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /multi_waypoint_add
+    - Class: waypoint_rviz_plugin/MultiWaypointTool
+      Name: Multi Waypoint
   Transformation:
     Current:
       Class: rviz_default_plugins/TF

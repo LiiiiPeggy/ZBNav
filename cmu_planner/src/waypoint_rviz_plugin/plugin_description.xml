@@ -6,4 +6,14 @@
       A tool for sending waypoints
     </description>
   </class>
+  <!-- ################################ -->
+  <!-- XML: register MULTI waypoint RViz tool -->
+  <!-- ################################ -->
+  <class name="waypoint_rviz_plugin/MultiWaypointTool"
+         type="waypoint_rviz_plugin::MultiWaypointTool"
+         base_class_type="rviz_common::Tool">
+    <description>
+      Add MULTI cruise waypoints on the RViz XY plane without requiring point-cloud hits.
+    </description>
+  </class>
 </library>
