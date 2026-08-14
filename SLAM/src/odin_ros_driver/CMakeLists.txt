@@ -409,6 +409,16 @@ elseif(ROS_VERSION STREQUAL "ROS2")
         pcl_conversions
     )
 
+    # ################################
+    # CMake: add map_downsample offline PLY->PCD tool
+    # ################################
+    add_executable(map_downsample
+        src/map_downsample.cpp
+    )
+    target_link_libraries(map_downsample
+        ${PCL_LIBRARIES}
+    )
+
     # Installation rules - ensure all install targets are defined before ament_package()
     # Install executable
     install(TARGETS
@@ -417,6 +427,7 @@ elseif(ROS_VERSION STREQUAL "ROS2")
         cloud_reprojection_ros2_node
         image_overlay_node
         registered_scan_adapter_node
+        map_downsample
         depth_image_ros2_node_lib
         pointcloud_depth_converter_ros2
         cloud_reprojector_ros2
