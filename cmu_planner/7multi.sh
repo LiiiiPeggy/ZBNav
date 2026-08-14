@@ -5,33 +5,38 @@ source /opt/ros/humble/setup.bash
 source install/setup.bash
 
 # ################################
-# Bash: launch multi-point cruise with yaml/rviz source and odom/map frame
+# Bash: launch multi-point cruise with yaml/rviz source and odin_odom/odin_map frame
 # ################################
 # RViz display frame and MULTI internal planning frame are independent:
-# - Real-robot RViz Fixed Frame may remain "map" (point clouds display correctly).
+# - Default multi_frame is "odin_odom" (no map / no relocalization needed).
+# - RViz Fixed Frame is "odin_odom" (no-map mode) or "odin_map" (map mode).
 # - Clicked PointStamped waypoints are automatically transformed to multi_frame.
-# - Default multi_frame stays "odom" (no map / no relocalization needed).
 mode=${1:-rviz}
 loop_count=${2:--1}
-frame=${3:-odom}
+frame=${3:-odin_odom}
 
 if [[ "$mode" != "yaml" && "$mode" != "rviz" ]]; then
-  echo "Usage: bash 7multi.sh [yaml|rviz] [loop_count] [odom|map]"
+  echo "Usage: bash 7multi.sh [yaml|rviz] [loop_count] [odin_odom|odin_map]"
   echo "Examples:"
-  echo "  bash 7multi.sh             # default: RViz clicks, odom frame (no map needed)"
-  echo "  bash 7multi.sh rviz 3      # RViz clicks, odom frame, 3 loops"
-  echo "  bash 7multi.sh yaml        # YAML route, odom frame (no map needed)"
-  echo "  bash 7multi.sh yaml 3      # YAML route, odom frame, 3 loops"
-  echo "  bash 7multi.sh yaml -1 map # YAML route in prebuilt map frame (needs Odin relocalization)"
-  echo "  bash 7multi.sh rviz -1 map # RViz clicks in map frame (needs Odin relocalization)"
-  echo "Note: RViz Fixed Frame may stay 'map'; clicked waypoints are"
-  echo "      auto-transformed to multi_frame (display frame and planning"
-  echo "      frame are independent; default multi_frame stays 'odom')."
+  echo "  bash 7multi.sh                  # default: RViz clicks, odin_odom frame (no map needed)"
+  echo "  bash 7multi.sh rviz 3           # RViz clicks, odin_odom frame, 3 loops"
+  echo "  bash 7multi.sh yaml             # YAML route, odin_odom frame (no map needed)"
+  echo "  bash 7multi.sh yaml 3           # YAML route, odin_odom frame, 3 loops"
+  echo "  bash 7multi.sh yaml -1 odin_map # YAML route in prebuilt map frame (needs Odin relocalization)"
+  echo "  bash 7multi.sh rviz -1 odin_map # RViz clicks in odin_map frame (needs Odin relocalization)"
+  echo "Note: legacy 'odom'/'map' arguments are accepted and normalized."
+  echo "      RViz Fixed Frame is 'odin_odom' (no-map) or 'odin_map'"
+  echo "      (map mode); clicked waypoints are transformed to multi_frame."
   exit 1
 fi
 
-if [[ "$frame" != "odom" && "$frame" != "map" ]]; then
-  echo "Error: frame must be 'odom' or 'map' (got '$frame')"
+# ################################
+# Bash: normalize legacy odom/map frames to odin_odom/odin_map
+# ################################
+if [[ "$frame" == "odom" ]]; then frame=odin_odom; fi
+if [[ "$frame" == "map" ]]; then frame=odin_map; fi
+if [[ "$frame" != "odin_odom" && "$frame" != "odin_map" ]]; then
+  echo "Error: frame must be 'odin_odom' or 'odin_map' (got '$frame'; legacy 'odom'/'map' accepted)"
   exit 1
 fi
 

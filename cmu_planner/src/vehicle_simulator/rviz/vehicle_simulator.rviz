@@ -518,9 +518,13 @@ Visualization Manager:
   Global Options:
     Background Color: 0; 0; 0
 # ################################
-# YAML: use odom as shared RViz fixed frame for current Odin navigation chain
+# YAML: use odin_odom as shared RViz fixed frame for current Odin navigation chain
 # ################################
-    Fixed Frame: odom
+# Operator note: MULTI waypoint clicks carry the RViz Fixed Frame.
+# - No-map MULTI: RViz Fixed Frame stays odin_odom (the default below).
+# - Map-mode MULTI: manually set Global Options -> Fixed Frame to odin_map
+#   after launch. Automatic RViz-config switching is out of scope.
+    Fixed Frame: odin_odom
     Frame Rate: 15
   Name: root
   Tools:

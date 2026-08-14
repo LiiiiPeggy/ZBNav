@@ -29,6 +29,12 @@ def generate_launch_description():
   multi_route_file = LaunchConfiguration('multi_route_file')
   default_wait_time = LaunchConfiguration('default_wait_time')
 
+  # ################################
+  # Python: bind planning/global frame launch configurations
+  # ################################
+  planning_frame = LaunchConfiguration('planning_frame')
+  global_frame = LaunchConfiguration('global_frame')
+
   declare_cameraOffsetZ = DeclareLaunchArgument('cameraOffsetZ', default_value='0.0', description='')
   declare_vehicleX = DeclareLaunchArgument('vehicleX', default_value='0.0', description='')
   declare_vehicleY = DeclareLaunchArgument('vehicleY', default_value='0.0', description='')
@@ -45,9 +51,15 @@ def generate_launch_description():
   # ################################
   declare_multi_enabled = DeclareLaunchArgument('multi_enabled', default_value='false', description='Enable multi-point cruise')
   declare_multi_source = DeclareLaunchArgument('multi_source', default_value='yaml', description='Waypoint source: yaml|rviz')
-  declare_multi_frame = DeclareLaunchArgument('multi_frame', default_value='odom', description='Waypoint coordinate frame: odom|map')
+  declare_multi_frame = DeclareLaunchArgument('multi_frame', default_value='odin_odom', description='Waypoint coordinate frame: odin_odom|odin_map')
   declare_multi_route_file = DeclareLaunchArgument('multi_route_file', default_value='', description='Path to multi_route.yaml (default: package share)')
   declare_default_wait_time = DeclareLaunchArgument('default_wait_time', default_value='2.0', description='Default wait at each waypoint (s)')
+
+  # ################################
+  # Python: declare planning/global frame launch arguments
+  # ################################
+  declare_planning_frame = DeclareLaunchArgument('planning_frame', default_value='odin_odom', description='Local planning frame')
+  declare_global_frame = DeclareLaunchArgument('global_frame', default_value='odin_map', description='Map/relocalization frame')
 
   start_local_planner = IncludeLaunchDescription(
     FrontendLaunchDescriptionSource(os.path.join(
@@ -112,6 +124,11 @@ def generate_launch_description():
       'multi_frame': multi_frame,
       'multi_route_file': multi_route_file,
       'default_wait_time': default_wait_time,
+      # ################################
+      # Python: forward planning/global frame launch arguments
+      # ################################
+      'planning_frame': planning_frame,
+      'global_frame': global_frame,
     }.items()
   )
 
@@ -155,6 +172,12 @@ def generate_launch_description():
   ld.add_action(declare_multi_frame)
   ld.add_action(declare_multi_route_file)
   ld.add_action(declare_default_wait_time)
+
+  # ################################
+  # Python: add planning/global frame declarations to launch description
+  # ################################
+  ld.add_action(declare_planning_frame)
+  ld.add_action(declare_global_frame)
 
   ld.add_action(start_local_planner)
   ld.add_action(start_cruise)
