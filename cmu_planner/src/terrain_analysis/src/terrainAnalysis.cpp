@@ -103,6 +103,11 @@ bool systemInited = false;
 // C++: track input /registered_scan frame for /terrain_map
 // ################################
 std::string laserCloudFrame = "map";
+// ################################
+// C++: track /state_estimation frame and receipt for mismatch guard
+// ################################
+std::string odometry_frame_;
+bool odometry_received_ = false;
 int noDataInited = 0;
 
 float vehicleRoll = 0, vehiclePitch = 0, vehicleYaw = 0;
@@ -117,6 +122,14 @@ pcl::VoxelGrid<pcl::PointXYZI> downSizeFilter;
 
 // state estimation callback function
 void odometryHandler(const nav_msgs::msg::Odometry::ConstSharedPtr odom) {
+  // ################################
+  // C++: record state_estimation frame + receipt
+  // ################################
+  if (!odom->header.frame_id.empty()) {
+    odometry_frame_ = odom->header.frame_id;
+  }
+  odometry_received_ = true;
+
   double roll, pitch, yaw;
   geometry_msgs::msg::Quaternion geoQuat = odom->pose.pose.orientation;
   tf2::Matrix3x3(tf2::Quaternion(geoQuat.x, geoQuat.y, geoQuat.z, geoQuat.w))
@@ -157,6 +170,38 @@ void laserCloudHandler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr laser
   // ################################
   if (!laserCloud2->header.frame_id.empty()) {
     laserCloudFrame = laserCloud2->header.frame_id;
+  }
+  // ################################
+  // C++: require /state_estimation before processing cloud
+  // ################################
+  if (!odometry_received_) {
+    static rclcpp::Clock throttle_clock;
+    RCLCPP_WARN_THROTTLE(rclcpp::get_logger("terrain_analysis"),
+      throttle_clock, 3000,
+      "[FRAME] no /state_estimation yet; ignoring registered_scan");
+    return;
+  }
+
+  // ################################
+  // C++: fail-fast when state_estimation and registered_scan frames disagree
+  // ################################
+  if (!odometry_frame_.empty() && !laserCloudFrame.empty() &&
+      odometry_frame_ != laserCloudFrame) {
+    RCLCPP_ERROR(rclcpp::get_logger("terrain_analysis"),
+      "[FRAME] frame mismatch: state_estimation=%s but registered_scan=%s; rejecting cloud",
+      odometry_frame_.c_str(), laserCloudFrame.c_str());
+    return;
+  }
+
+  // ################################
+  // C++: log one-time frame diagnostic once BOTH frames are known
+  // ################################
+  static bool frame_logged = false;
+  if (!frame_logged && !odometry_frame_.empty() && !laserCloudFrame.empty()) {
+    RCLCPP_INFO(rclcpp::get_logger("terrain_analysis"),
+      "[FRAME] state_estimation=%s registered_scan=%s",
+      odometry_frame_.c_str(), laserCloudFrame.c_str());
+    frame_logged = true;
   }
   if (!systemInited) {
     systemInitTime = laserCloudTime;
