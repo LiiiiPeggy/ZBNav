@@ -41,7 +41,7 @@
  *   4. Publishes to /registered_scan, preserving the original header.
  *
  * The vehicle-relative distance filter is needed because cloud_slam points
- * are in the 'odom' frame (global coordinates), not sensor-relative.
+ * are in the 'odin_odom' frame (global coordinates), not sensor-relative.
  */
 class RegisteredScanAdapterNode : public rclcpp::Node
 {

@@ -87,10 +87,16 @@ def generate_launch_description():
     }.items()
   )
 
+  # ################################
+  # Python: forward planning_frame to sensor_scan_generation
+  # ################################
   start_sensor_scan_generation = IncludeLaunchDescription(
     FrontendLaunchDescriptionSource(os.path.join(
       get_package_share_directory('sensor_scan_generation'), 'launch', 'sensor_scan_generation.launch')
-    )
+    ),
+    launch_arguments={
+      'planning_frame': planning_frame,
+    }.items()
   )
 
   start_joy = Node(

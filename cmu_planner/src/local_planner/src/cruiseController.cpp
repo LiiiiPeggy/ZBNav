@@ -486,7 +486,7 @@ private:
       if (multi_frame_ == "odin_map" &&
           !tf_buffer_.canTransform(planning_frame_, global_frame_, tf2::TimePointZero)) {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-          "[MULTI] Waiting for odom->map TF (map mode)...");
+          "[MULTI] Waiting for odin_map -> odin_odom relocalization TF...");
         return;
       }
       RCLCPP_INFO(this->get_logger(),
@@ -778,7 +778,7 @@ private:
   }
 
   // ################################
-  // C++: transform map waypoint to odom frame
+  // C++: transform global-frame waypoint to planning frame
   // ################################
   bool transformToOdom(double mx, double my, double & ox, double & oy)
   {
@@ -953,8 +953,8 @@ private:
     }
     active_goal_valid_ = true;
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI] Going to WP%zu: (%s frame) (%.3f, %.3f) -> odom (%.3f, %.3f)",
-      waypoint_index_, multi_frame_.c_str(), w.x, w.y, gx_odom_, gy_odom_);
+      "[MULTI] Going to WP%zu: (%s frame) (%.3f, %.3f) -> %s (%.3f, %.3f)",
+      waypoint_index_, multi_frame_.c_str(), w.x, w.y, planning_frame_.c_str(), gx_odom_, gy_odom_);
     sendMultiWaypointAndGo(gx_odom_, gy_odom_);
     publishMarkers();
   }
@@ -1095,7 +1095,7 @@ private:
     if (multi_frame_ == "odin_map" &&
         !tf_buffer_.canTransform(planning_frame_, global_frame_, tf2::TimePointZero)) {
       res->success = false;
-      res->message = "odom->map TF not available";
+      res->message = "odin_map -> odin_odom TF not available";
       RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
       return;
     }

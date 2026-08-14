@@ -1,5 +1,12 @@
 <launch>
 
-  <node pkg="sensor_scan_generation" exec="sensorScanGeneration" name="sensorScanGeneration" output="screen"/>
+  <!-- ################################ -->
+  <!-- XML: expose planning_frame for sensor_scan generation -->
+  <!-- ################################ -->
+  <arg name="planning_frame" default="odin_odom"/>
+
+  <node pkg="sensor_scan_generation" exec="sensorScanGeneration" name="sensorScanGeneration" output="screen">
+    <param name="planning_frame" value="$(var planning_frame)" />
+  </node>
 
 </launch>

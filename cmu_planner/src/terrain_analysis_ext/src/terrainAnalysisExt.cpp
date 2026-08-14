@@ -88,7 +88,8 @@ bool newlaserCloud = false;
 // ################################
 // C++: track input /registered_scan frame for /terrain_map_ext
 // ################################
-std::string laserCloudFrame = "map";
+// No bare-frame default: /terrain_map_ext frame must come from /registered_scan.
+std::string laserCloudFrame;
 // ################################
 // C++: track /state_estimation frame and receipt for mismatch guard
 // ################################
@@ -108,11 +109,16 @@ pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
 void odometryHandler(const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
   // ################################
-  // C++: record state_estimation frame + receipt
+  // C++: reject empty state_estimation frame, then record receipt
   // ################################
-  if (!odom->header.frame_id.empty()) {
-    odometry_frame_ = odom->header.frame_id;
+  if (odom->header.frame_id.empty()) {
+    static rclcpp::Clock throttle_clock;
+    RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("terrainAnalysisExt"),
+      throttle_clock, 3000,
+      "[FRAME] /state_estimation has empty frame_id; ignoring");
+    return;
   }
+  odometry_frame_ = odom->header.frame_id;
   odometry_received_ = true;
 
   double roll, pitch, yaw;
@@ -132,11 +138,16 @@ void laserCloudHandler(const sensor_msgs::msg::PointCloud2::ConstSharedPtr laser
 {
   laserCloudTime = rclcpp::Time(laserCloud2->header.stamp).seconds();
   // ################################
-  // C++: inherit /registered_scan frame for /terrain_map_ext
+  // C++: require valid /registered_scan frame for /terrain_map_ext
   // ################################
-  if (!laserCloud2->header.frame_id.empty()) {
-    laserCloudFrame = laserCloud2->header.frame_id;
+  if (laserCloud2->header.frame_id.empty()) {
+    static rclcpp::Clock throttle_clock;
+    RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("terrainAnalysisExt"),
+      throttle_clock, 3000,
+      "[FRAME] /registered_scan has empty frame_id; ignoring");
+    return;
   }
+  laserCloudFrame = laserCloud2->header.frame_id;
   // ################################
   // C++: require /state_estimation before processing cloud
   // ################################
