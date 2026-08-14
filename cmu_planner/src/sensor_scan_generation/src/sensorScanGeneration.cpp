@@ -39,7 +39,12 @@ bool newTransformToMap = false;
 nav_msgs::msg::Odometry odometryIn;
 shared_ptr<rclcpp::Publisher<nav_msgs::msg::Odometry>> pubOdometryPointer;
 tf2::Stamped<tf2::Transform> transformToMap;
-geometry_msgs::msg::TransformStamped transformTfGeom ; 
+geometry_msgs::msg::TransformStamped transformTfGeom ;
+
+// ################################
+// C++: inherit planning frame instead of hardcoded map
+// ################################
+std::string planning_frame = "odin_odom";
 
 unique_ptr<tf2_ros::TransformBroadcaster> tfBroadcasterPointer;
 shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> pubLaserCloud;
@@ -47,6 +52,24 @@ shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>> pubLaserCloud;
 void laserCloudAndOdometryHandler(const nav_msgs::msg::Odometry::ConstSharedPtr odometry,
                                   const sensor_msgs::msg::PointCloud2::ConstSharedPtr laserCloud2)
 {
+  // ################################
+  // C++: reject inputs not in the planning frame
+  // ################################
+  if (!odometry->header.frame_id.empty() &&
+      odometry->header.frame_id != planning_frame) {
+    RCLCPP_ERROR(rclcpp::get_logger("sensor_scan"),
+      "[FRAME] /state_estimation frame '%s' != planning_frame '%s'; rejecting",
+      odometry->header.frame_id.c_str(), planning_frame.c_str());
+    return;
+  }
+  if (!laserCloud2->header.frame_id.empty() &&
+      laserCloud2->header.frame_id != planning_frame) {
+    RCLCPP_ERROR(rclcpp::get_logger("sensor_scan"),
+      "[FRAME] /registered_scan frame '%s' != planning_frame '%s'; rejecting",
+      laserCloud2->header.frame_id.c_str(), planning_frame.c_str());
+    return;
+  }
+
   laserCloudIn->clear();
   laserCLoudInSensorFrame->clear();
 
@@ -81,11 +104,11 @@ void laserCloudAndOdometryHandler(const nav_msgs::msg::Odometry::ConstSharedPtr 
   }
 
   odometryIn.header.stamp = laserCloud2->header.stamp;
-  odometryIn.header.frame_id = "map";
+  odometryIn.header.frame_id = planning_frame;
   odometryIn.child_frame_id = "sensor_at_scan";
   pubOdometryPointer->publish(odometryIn);
 
-  transformToMap.frame_id_ = "map";
+  transformToMap.frame_id_ = planning_frame;
   transformTfGeom = tf2::toMsg(transformToMap);
   transformTfGeom.header.stamp = laserCloud2->header.stamp;
   transformTfGeom.child_frame_id = "sensor_at_scan";
@@ -102,6 +125,12 @@ int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
   auto nh = rclcpp::Node::make_shared("sensor_scan");
+
+  // ################################
+  // C++: declare and read planning frame param
+  // ################################
+  nh->declare_parameter<std::string>("planning_frame", "odin_odom");
+  nh->get_parameter("planning_frame", planning_frame);
 
   // ROS message filters
   message_filters::Subscriber<nav_msgs::msg::Odometry> subOdometry;
