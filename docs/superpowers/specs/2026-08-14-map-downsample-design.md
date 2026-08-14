@@ -50,10 +50,50 @@ map_downsample <input.ply> [output.pcd] [leaf_size]
 | File | Action | Responsibility |
 |------|--------|----------------|
 | `SLAM/src/odin_ros_driver/src/map_downsample.cpp` | Create | CLI arg parse + loadPLYFile + VoxelGrid + savePCDFileBinary + summary logs |
-| `SLAM/src/odin_ros_driver/CMakeLists.txt` | Modify | `add_executable(map_downsample …)` + `${PCL_INCLUDE_DIRS}` + `${PCL_LIBRARIES}`, following the `pcd2depth_node` pattern |
+| `SLAM/src/odin_ros_driver/CMakeLists.txt` | Modify | add executable + link PCL + add `map_downsample` to the ROS2 `install(TARGETS …)` list (see CMake changes below) |
 
 The load+VoxelGrid logic stays in one small function so the future topic publisher node can
 reuse the same PCL calls (load PCD → optional re-downsample → publish).
+
+## CMake changes (exact)
+
+`find_package(PCL REQUIRED)` and `include_directories(... ${PCL_INCLUDE_DIRS} ...)` are already
+global in the file — do NOT add `PCL_INCLUDE_DIRS` per-target. Only:
+
+```cmake
+add_executable(map_downsample
+    src/map_downsample.cpp
+)
+
+target_link_libraries(map_downsample
+    ${PCL_LIBRARIES}
+)
+```
+
+**Required:** add `map_downsample` to the existing ROS2 install list (the block that ends with
+`RUNTIME DESTINATION lib/${PROJECT_NAME}`), alongside `host_sdk_sample`, `pcd2depth_ros2_node`,
+`cloud_reprojection_ros2_node`, `image_overlay_node`, `registered_scan_adapter_node`, …:
+
+```cmake
+install(TARGETS
+    host_sdk_sample
+    pcd2depth_ros2_node
+    cloud_reprojection_ros2_node
+    image_overlay_node
+    registered_scan_adapter_node
+    map_downsample
+    depth_image_ros2_node_lib
+    pointcloud_depth_converter_ros2
+    cloud_reprojector_ros2
+    EXPORT export_${PROJECT_NAME}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
+```
+
+Without this, `colcon build` succeeds but
+`./install/odin_ros_driver/lib/odin_ros_driver/map_downsample` would not exist.
 
 ## Verification
 
