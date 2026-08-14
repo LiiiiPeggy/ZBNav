@@ -195,7 +195,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Billboards
       Line Width: 0.05000000074505806
-      Name: Path
+      Name: PathViz
       Offset:
         X: 0
         Y: 0
@@ -211,7 +211,10 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /path
+        # ################################
+        # YAML: show odin_odom path_viz instead of vehicle-frame path
+        # ################################
+        Value: /path_viz
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false

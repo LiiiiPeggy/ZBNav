@@ -530,6 +530,38 @@ void readCorrespondences()
   fclose(filePtr);
 }
 
+// ################################
+// C++: publish odin_odom path for RViz visualization
+// ################################
+// /path stays vehicle-local for pathFollower; this helper builds a
+// visualization-only copy in odin_odom by rotating the vehicle-local
+// points by vehicleYaw and translating by the vehicle position.
+// With a zero-point path (pathFound=false) the result is the robot's
+// current position — never the odin_odom origin.
+void publishPathViz(const nav_msgs::msg::Path & path,
+                    double vx, double vy, double vz, double vyaw,
+                    const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr & pub_path_viz)
+{
+  nav_msgs::msg::Path path_viz;
+  path_viz.header.stamp = path.header.stamp;
+  path_viz.header.frame_id = "odin_odom";
+  path_viz.poses.resize(path.poses.size());
+
+  double cos_yaw = cos(vyaw);
+  double sin_yaw = sin(vyaw);
+  for (size_t i = 0; i < path.poses.size(); i++) {
+    double x_v = path.poses[i].pose.position.x;
+    double y_v = path.poses[i].pose.position.y;
+    double z_v = path.poses[i].pose.position.z;
+    path_viz.poses[i].header = path_viz.header;
+    path_viz.poses[i].pose.position.x = vx + cos_yaw * x_v - sin_yaw * y_v;
+    path_viz.poses[i].pose.position.y = vy + sin_yaw * x_v + cos_yaw * y_v;
+    path_viz.poses[i].pose.position.z = vz + z_v;
+    path_viz.poses[i].pose.orientation.w = 1.0;
+  }
+  pub_path_viz->publish(path_viz);
+}
+
 int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
@@ -639,6 +671,11 @@ int main(int argc, char** argv)
   auto subCruiseAutonomy = nh->create_subscription<std_msgs::msg::Bool>("/cruise_autonomy", 5, cruiseAutonomyHandler);
 
   auto pubPath = nh->create_publisher<nav_msgs::msg::Path>("/path", 5);
+
+  // ################################
+  // C++: publish odin_odom path for RViz visualization
+  // ################################
+  auto pubPathViz = nh->create_publisher<nav_msgs::msg::Path>("/path_viz", 5);
   nav_msgs::msg::Path path;
 
   #if PLOTPATHSET == 1
@@ -930,6 +967,11 @@ int main(int argc, char** argv)
           path.header.frame_id = "vehicle";
           pubPath->publish(path);
 
+          // ################################
+          // C++: publish path_viz in odin_odom for RViz
+          // ################################
+          publishPathViz(path, vehicleX, vehicleY, vehicleZ, vehicleYaw, pubPathViz);
+
           #if PLOTPATHSET == 1
           freePaths->clear();
           for (int i = 0; i < 36 * pathNum; i++) {
@@ -1001,6 +1043,13 @@ int main(int argc, char** argv)
         path.header.stamp = rclcpp::Time(static_cast<uint64_t>(odomTime * 1e9));
         path.header.frame_id = "vehicle";
         pubPath->publish(path);
+
+        // ################################
+        // C++: publish path_viz at robot position when no path found
+        // ################################
+        // The zero-point local path maps to the robot's current odin_odom
+        // position (vehicleX/Y/Z) — never the odin_odom origin.
+        publishPathViz(path, vehicleX, vehicleY, vehicleZ, vehicleYaw, pubPathViz);
 
         #if PLOTPATHSET == 1
         freePaths->clear();
