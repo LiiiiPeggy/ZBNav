@@ -79,7 +79,10 @@ void WaypointTool::onPoseSet(double x, double y, double theta)
   pub_joy_->publish(joy);
 
   geometry_msgs::msg::PointStamped waypoint;
-  waypoint.header.frame_id = "map";
+  // ################################
+  // C++: publish waypoint in current RViz Fixed Frame
+  // ################################
+  waypoint.header.frame_id = context_->getFixedFrame().toStdString();
   waypoint.header.stamp = joy.header.stamp;
   waypoint.point.x = x;
   waypoint.point.y = y;
