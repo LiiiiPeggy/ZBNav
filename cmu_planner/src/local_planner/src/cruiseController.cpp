@@ -77,7 +77,9 @@ public:
     // ################################
     this->declare_parameter<bool>("multi_enabled", false);
     this->declare_parameter<std::string>("multi_source", "yaml");
-    this->declare_parameter<std::string>("multi_frame", "odom");
+    this->declare_parameter<std::string>("multi_frame", "odin_odom");
+    this->declare_parameter<std::string>("planning_frame", "odin_odom");
+    this->declare_parameter<std::string>("global_frame", "odin_map");
     this->declare_parameter<std::string>("multi_route_file", "");
     this->declare_parameter<double>("default_wait_time", 2.0);
 
@@ -92,6 +94,8 @@ public:
     multi_enabled_ = this->get_parameter("multi_enabled").as_bool();
     multi_source_ = this->get_parameter("multi_source").as_string();
     multi_frame_ = this->get_parameter("multi_frame").as_string();
+    planning_frame_ = this->get_parameter("planning_frame").as_string();
+    global_frame_ = this->get_parameter("global_frame").as_string();
     std::string mrf = this->get_parameter("multi_route_file").as_string();
     multi_route_file_ = mrf.empty()
       ? ament_index_cpp::get_package_share_directory("local_planner") + "/config/multi_route.yaml"
@@ -105,12 +109,19 @@ public:
       throw std::runtime_error("Invalid multi_source");
     }
 
-    // Validate multi_frame
-    if (multi_frame_ != "odom" && multi_frame_ != "map") {
+    // ################################
+    // C++: normalize legacy multi_frame values to odin_ namespace
+    // ################################
+    if (multi_frame_ == "odom") { multi_frame_ = "odin_odom"; }
+    else if (multi_frame_ == "map") { multi_frame_ = "odin_map"; }
+    if (multi_frame_ != "odin_odom" && multi_frame_ != "odin_map") {
       RCLCPP_ERROR(this->get_logger(),
-        "[MULTI] Invalid multi_frame='%s' (must be 'odom' or 'map')", multi_frame_.c_str());
+        "[MULTI] Invalid multi_frame='%s' (must be 'odin_odom' or 'odin_map')", multi_frame_.c_str());
       throw std::runtime_error("Invalid multi_frame");
     }
+    RCLCPP_INFO(this->get_logger(),
+      "[FRAME] planning_frame=%s global_frame=%s",
+      planning_frame_.c_str(), global_frame_.c_str());
 
     // multi + repeat is an invalid combination
     if (multi_enabled_ && repeat_enabled_) {
@@ -256,18 +267,25 @@ private:
     }
 
     // ################################
-    // C++: ignore cruise waypoint in MULTI mode
+    // C++: route /way_point_cruise clicks into the MULTI list
     // ################################
     if (multi_enabled_) {
-      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
-        "[MULTI] Ignoring /way_point_cruise in MULTI mode");
+      addMultiWaypoint(*msg);
+      return;
+    }
+
+    // ################################
+    // C++: resolve goal frame to planning frame before use
+    // ################################
+    geometry_msgs::msg::PointStamped goal;
+    if (!transformGoalToPlanningFrame(*msg, goal)) {
       return;
     }
 
     // Repeat mode: accept new waypoint even while cruising (retarget + reset)
     if (repeat_enabled_ && state_ != CruiseState::IDLE) {
-      dest_x_ = msg->point.x;
-      dest_y_ = msg->point.y;
+      dest_x_ = goal.point.x;
+      dest_y_ = goal.point.y;
       start_x_ = current_x_;
       start_y_ = current_y_;
       completed_loops_ = 0;
@@ -290,8 +308,8 @@ private:
     start_x_ = current_x_;
     start_y_ = current_y_;
 
-    dest_x_ = msg->point.x;
-    dest_y_ = msg->point.y;
+    dest_x_ = goal.point.x;
+    dest_y_ = goal.point.y;
     RCLCPP_INFO(this->get_logger(),
       "[CRUISE][INPUT] start=(%.3f, %.3f), destination=(%.3f, %.3f)",
       start_x_, start_y_, dest_x_, dest_y_);
@@ -351,7 +369,7 @@ private:
   {
     geometry_msgs::msg::PointStamped wp;
     wp.header.stamp = this->now();
-    wp.header.frame_id = "map";
+    wp.header.frame_id = planning_frame_;
     wp.point.x = x;
     wp.point.y = y;
     wp.point.z = 0.0;
@@ -465,8 +483,8 @@ private:
           "[MULTI] Waiting for /state_estimation...");
         return;
       }
-      if (multi_frame_ == "map" &&
-          !tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+      if (multi_frame_ == "odin_map" &&
+          !tf_buffer_.canTransform(planning_frame_, global_frame_, tf2::TimePointZero)) {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
           "[MULTI] Waiting for odom->map TF (map mode)...");
         return;
@@ -703,6 +721,63 @@ private:
   }
 
   // ################################
+  // C++: resolve a received goal frame into the planning frame
+  // ################################
+  // Policy: empty -> assume planning frame (warn); planning frame -> copy;
+  // global frame -> tf2 transform (reject if TF missing); motion-control
+  // bare "map" -> reject; any other frame -> transform if possible, else reject.
+  bool transformGoalToPlanningFrame(
+    const geometry_msgs::msg::PointStamped & input,
+    geometry_msgs::msg::PointStamped & output)
+  {
+    if (input.header.frame_id.empty()) {
+      RCLCPP_WARN(this->get_logger(),
+        "[CRUISE] goal has empty frame; assuming %s (legacy compat, no transform)",
+        planning_frame_.c_str());
+      // Legacy compatibility: the coordinates are used as-is, but the output
+      // MUST be explicitly tagged with the planning frame. This is an
+      // assumption, NOT a coordinate transform.
+      output = input;
+      output.header.frame_id = planning_frame_;
+      return true;
+    }
+    if (input.header.frame_id == planning_frame_) {
+      RCLCPP_INFO(this->get_logger(),
+        "[CRUISE] goal received frame=%s x=%.3f y=%.3f", planning_frame_.c_str(),
+        input.point.x, input.point.y);
+      RCLCPP_INFO(this->get_logger(),
+        "[CRUISE] goal already in planning frame, no TF required");
+      output = input;
+      return true;
+    }
+    if (input.header.frame_id == "map") {
+      RCLCPP_WARN(this->get_logger(),
+        "[CRUISE] goal frame 'map' belongs to motion-control TF tree; use %s or %s",
+        planning_frame_.c_str(), global_frame_.c_str());
+      return false;
+    }
+    if (input.header.frame_id == global_frame_) {
+      RCLCPP_INFO(this->get_logger(),
+        "[CRUISE] goal received frame=%s x=%.3f y=%.3f", global_frame_.c_str(),
+        input.point.x, input.point.y);
+    }
+    try {
+      geometry_msgs::msg::TransformStamped t =
+        tf_buffer_.lookupTransform(planning_frame_, input.header.frame_id, tf2::TimePointZero);
+      tf2::doTransform(input, output, t);
+      RCLCPP_INFO(this->get_logger(),
+        "[CRUISE] transformed %s -> %s: x=%.3f y=%.3f",
+        input.header.frame_id.c_str(), planning_frame_.c_str(), output.point.x, output.point.y);
+      return true;
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_WARN(this->get_logger(),
+        "[CRUISE] goal rejected: %s -> %s TF unavailable (%s)",
+        input.header.frame_id.c_str(), planning_frame_.c_str(), e.what());
+      return false;
+    }
+  }
+
+  // ################################
   // C++: transform map waypoint to odom frame
   // ################################
   bool transformToOdom(double mx, double my, double & ox, double & oy)
@@ -710,17 +785,17 @@ private:
     try {
       // Explicit lookup + doTransform (NOT buffer_.transform), and do NOT set
       // header.stamp to tf2::TimePointZero — use the lookup's own timepoint.
-      geometry_msgs::msg::TransformStamped t_map_odom =
-        tf_buffer_.lookupTransform("odom", "map", tf2::TimePointZero);
+      geometry_msgs::msg::TransformStamped t_global_planning =
+        tf_buffer_.lookupTransform(planning_frame_, global_frame_, tf2::TimePointZero);
 
       geometry_msgs::msg::PointStamped map_pt;
-      map_pt.header.frame_id = "map";
+      map_pt.header.frame_id = global_frame_;
       map_pt.point.x = mx;
       map_pt.point.y = my;
       map_pt.point.z = 0.0;
 
       geometry_msgs::msg::PointStamped odom_pt;
-      tf2::doTransform(map_pt, odom_pt, t_map_odom);
+      tf2::doTransform(map_pt, odom_pt, t_global_planning);
       ox = odom_pt.point.x;
       oy = odom_pt.point.y;
       return true;
@@ -865,12 +940,12 @@ private:
     active_goal_valid_ = false;
 
     const Waypoint & w = waypoints_[waypoint_index_];
-    if (multi_frame_ == "odom") {
+    if (multi_frame_ == "odin_odom") {
       // odom mode (default): waypoint coordinates ARE odom coordinates.
       // No TF, no map, no relocalization required.
       gx_odom_ = w.x;
       gy_odom_ = w.y;
-    } else {  // multi_frame_ == "map"
+    } else {  // multi_frame_ == "odin_map"
       if (!transformToOdom(w.x, w.y, gx_odom_, gy_odom_)) {
         // transformToOdom() already logs the throttled failure detail
         return;  // stay in GO_TO_WAYPOINT, retry on next tick
@@ -902,13 +977,14 @@ private:
     startNextWaypoint();
   }
 
-  // MULTI publishes /way_point with frame_id="odom" (unlike SINGLE/REPEAT's
-  // sendWaypointAndGo which hardcodes frame_id="map"). SINGLE/REPEAT untouched.
+  // MULTI publishes /way_point in planning_frame_ (odin_odom) — goals are
+  // always forwarded to localPlanner in the planning frame. SINGLE/REPEAT
+  // sendWaypointAndGo publishes in planning_frame_ too.
   void sendMultiWaypointAndGo(double x, double y)
   {
     geometry_msgs::msg::PointStamped wp;
     wp.header.stamp = this->now();
-    wp.header.frame_id = "odom";
+    wp.header.frame_id = planning_frame_;
     wp.point.x = x;
     wp.point.y = y;
     wp.point.z = 0.0;
@@ -919,42 +995,45 @@ private:
     stop_pub_->publish(stop_msg);
 
     RCLCPP_INFO(this->get_logger(),
-      "[MULTI][WAYPOINT] publish /way_point (odom): x=%.3f, y=%.3f", x, y);
+      "[MULTI][WAYPOINT] publish /way_point (%s): x=%.3f, y=%.3f",
+      planning_frame_.c_str(), x, y);
   }
 
   // ################################
-  // C++: handle RViz waypoint add and start service
+  // C++: unify MULTI waypoint addition for all input channels
   // ################################
-  void addWaypointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
+  bool addMultiWaypoint(const geometry_msgs::msg::PointStamped & msg)
   {
     if (multi_source_ == "yaml") {
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
         "[MULTI] Ignoring RViz waypoint because multi_source=yaml");
-      return;
+      return false;
     }
     if (state_ != CruiseState::COLLECTING_WAYPOINTS) {
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
         "[MULTI] Route already started; RViz waypoint ignored");
-      return;
+      return false;
     }
-    // ################################
-    // C++: convert clicked waypoint frame to multi_frame
-    // ################################
-    // Invariant: waypoints_ always stores coordinates in multi_frame_
-    // (odom mode -> odom coords; map mode -> map coords). RViz Fixed Frame
-    // may differ from multi_frame_; clicks are converted via the live TF.
-    // The TF is needed only at click time — it is NOT a start condition.
-    if (msg->header.frame_id.empty()) {
+    if (msg.header.frame_id.empty()) {
       RCLCPP_WARN(this->get_logger(),
         "[MULTI] Waypoint has empty frame_id; ignored");
-      return;
+      return false;
+    }
+    // ################################
+    // C++: reject waypoints in the motion-control map frame
+    // ################################
+    if (msg.header.frame_id == "map") {
+      RCLCPP_WARN(this->get_logger(),
+        "[MULTI] Waypoint frame 'map' belongs to motion-control TF tree; use %s or %s",
+        planning_frame_.c_str(), global_frame_.c_str());
+      return false;
     }
     geometry_msgs::msg::PointStamped converted;
-    if (!transformPointToFrame(*msg, multi_frame_, converted)) {
+    if (!transformPointToFrame(msg, multi_frame_, converted)) {
       RCLCPP_WARN(this->get_logger(),
         "[MULTI] Cannot add waypoint: TF %s -> %s unavailable",
-        msg->header.frame_id.c_str(), multi_frame_.c_str());
-      return;
+        msg.header.frame_id.c_str(), multi_frame_.c_str());
+      return false;
     }
     Waypoint w;
     w.x = converted.point.x;
@@ -963,16 +1042,25 @@ private:
     w.wait_time = default_wait_time_;
     waypoints_.push_back(w);
     publishMarkers();
-    if (msg->header.frame_id == multi_frame_) {
+    if (msg.header.frame_id == multi_frame_) {
       RCLCPP_INFO(this->get_logger(),
         "[MULTI] Added WP%zu at (%.3f, %.3f) in %s frame; %zu total",
         waypoints_.size() - 1, w.x, w.y, multi_frame_.c_str(), waypoints_.size());
     } else {
       RCLCPP_INFO(this->get_logger(),
         "[MULTI] Added WP%zu: input %s=(%.3f, %.3f) -> stored %s=(%.3f, %.3f); %zu total",
-        waypoints_.size() - 1, msg->header.frame_id.c_str(), msg->point.x, msg->point.y,
+        waypoints_.size() - 1, msg.header.frame_id.c_str(), msg.point.x, msg.point.y,
         multi_frame_.c_str(), w.x, w.y, waypoints_.size());
     }
+    return true;
+  }
+
+  // ################################
+  // C++: handle RViz waypoint add and start service
+  // ################################
+  void addWaypointCallback(const geometry_msgs::msg::PointStamped::SharedPtr msg)
+  {
+    addMultiWaypoint(*msg);
   }
 
   void startService(
@@ -1004,8 +1092,8 @@ private:
     // ################################
     // odom mode starts with /state_estimation only; map mode additionally
     // needs the relocalization TF (re-checked at start time).
-    if (multi_frame_ == "map" &&
-        !tf_buffer_.canTransform("odom", "map", tf2::TimePointZero)) {
+    if (multi_frame_ == "odin_map" &&
+        !tf_buffer_.canTransform(planning_frame_, global_frame_, tf2::TimePointZero)) {
       res->success = false;
       res->message = "odom->map TF not available";
       RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
@@ -1059,6 +1147,8 @@ private:
   bool multi_enabled_ = false;
   std::string multi_source_;
   std::string multi_frame_;
+  std::string planning_frame_;
+  std::string global_frame_;
   std::string multi_route_file_;
   double default_wait_time_ = 2.0;
   double gx_odom_ = 0.0, gy_odom_ = 0.0;
