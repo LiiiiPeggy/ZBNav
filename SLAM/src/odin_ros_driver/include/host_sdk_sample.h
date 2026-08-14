@@ -100,6 +100,10 @@ double get_ptp_smoothed_offset();
     #include <sensor_msgs/msg/point_field.hpp>
     #include "tf2/LinearMath/Quaternion.h"
     #include "tf2_ros/transform_broadcaster.h"
+    // ################################
+    // C++: include tf2_geometry_msgs for tf2::toMsg in ROS2 branch
+    // ################################
+    #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
     namespace ros {
         using namespace rclcpp;
         using namespace std_msgs::msg;
@@ -768,6 +772,9 @@ void publishIntensityCloud(capture_Image_List_t* stream, int idx)
     #endif
 }
 
+// ################################
+// C++: rename Odin TF frames to odin_odom / odin_map
+// ################################
 void publishGrayUInt8(capture_Image_List_t *stream, int idx) {
     ImageMsg msg;
     #ifdef ROS2
@@ -775,7 +782,7 @@ void publishGrayUInt8(capture_Image_List_t *stream, int idx) {
     #else
         msg.header.stamp = make_aligned_stamp(stream->imageList[idx].timestamp);
     #endif
-    msg.header.frame_id = "map";
+    msg.header.frame_id = "odin_map";
 
     int width = stream->imageList[idx].width;
     int height = stream->imageList[idx].height;
@@ -908,7 +915,7 @@ void publishRgb(capture_Image_List_t *stream) {
     {
         #ifdef ROS2
                 sensor_msgs::msg::PointCloud2 msg;
-                msg.header.frame_id = "odom";
+                msg.header.frame_id = "odin_odom";
                 msg.header.stamp = make_aligned_stamp(stream->imageList[0].timestamp, node_);
 
                 //RCLCPP_INFO(rclcpp::get_logger("device_cb"), "Point cloudrgba %ld",stream->imageList[0].timestamp);
@@ -936,7 +943,7 @@ void publishRgb(capture_Image_List_t *stream) {
                 sensor_msgs::PointCloud2Iterator<float> iter_rgb(msg, "rgb");
         #else
             sensor_msgs::PointCloud2 msg;
-            msg.header.frame_id = "odom";
+            msg.header.frame_id = "odin_odom";
             msg.header.stamp = make_aligned_stamp(stream->imageList[0].timestamp);
             
             size_t pt_size = sizeof(int32_t) * 3 + sizeof(int32_t) * 4;
@@ -1184,11 +1191,11 @@ void publishRgb(capture_Image_List_t *stream) {
 #ifdef ROS2
         auto msg = nav_msgs::msg::Odometry();
         msg.header.stamp = make_aligned_stamp(odom_data->timestamp_ns, node_);
-        msg.header.frame_id = "odom";
+        msg.header.frame_id = "odin_odom";
 #else
         nav_msgs::Odometry msg;
         msg.header.stamp = make_aligned_stamp(odom_data->timestamp_ns);
-        msg.header.frame_id = "odom";
+        msg.header.frame_id = "odin_odom";
 #endif
         
         // Store T_CL in pose.covariance (first 16 elements)
@@ -1234,7 +1241,7 @@ void publishRgb(capture_Image_List_t *stream) {
             ros::Odometry msg;
 #endif
         
-            msg.header.frame_id = "odom";
+            msg.header.frame_id = "odin_odom";
             msg.child_frame_id = "odin1_base_link";
 
             //RCLCPP_INFO(rclcpp::get_logger("device_cb"), "odom %ld",odom_data->timestamp_ns);
@@ -1326,7 +1333,7 @@ void publishRgb(capture_Image_List_t *stream) {
                     if (getRosNodeControl()->sendOdomBaseLinkTF()) {
                         geometry_msgs::msg::TransformStamped transformStamped;
                         transformStamped.header.stamp = msg.header.stamp;
-                        transformStamped.header.frame_id = "odom";
+                        transformStamped.header.frame_id = "odin_odom";
                         transformStamped.child_frame_id = "odin1_base_link";
                         transformStamped.transform.translation.x = msg.pose.pose.position.x;
                         transformStamped.transform.translation.y = msg.pose.pose.position.y;
@@ -1400,17 +1407,19 @@ void publishRgb(capture_Image_List_t *stream) {
                     break;
                 case OdometryType::TRANSFORM:
                     {
+                    // ################################
+                    // C++: publish odin_map -> odin_odom relocalization TF (invert odom->map)
+                    // ################################
+                    tf2::Transform t_odom_map;
+                    t_odom_map.setOrigin(tf2::Vector3(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z));
+                    t_odom_map.setRotation(tf2::Quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,
+                                                           msg.pose.pose.orientation.z, msg.pose.pose.orientation.w));
+                    tf2::Transform t_map_odom = t_odom_map.inverse();
                     geometry_msgs::msg::TransformStamped transformStamped;
                     transformStamped.header.stamp = msg.header.stamp;
-                    transformStamped.header.frame_id = "odom";
-                    transformStamped.child_frame_id = "map";
-                    transformStamped.transform.translation.x = msg.pose.pose.position.x;
-                    transformStamped.transform.translation.y = msg.pose.pose.position.y;
-                    transformStamped.transform.translation.z = msg.pose.pose.position.z;
-                    transformStamped.transform.rotation.x = msg.pose.pose.orientation.x;
-                    transformStamped.transform.rotation.y = msg.pose.pose.orientation.y;
-                    transformStamped.transform.rotation.z = msg.pose.pose.orientation.z;
-                    transformStamped.transform.rotation.w = msg.pose.pose.orientation.w;
+                    transformStamped.header.frame_id = "odin_map";   // parent
+                    transformStamped.child_frame_id = "odin_odom";   // child
+                    transformStamped.transform = tf2::toMsg(t_map_odom);
                     tf_broadcaster->sendTransform(transformStamped);
                     }
                     break;
@@ -1422,7 +1431,7 @@ void publishRgb(capture_Image_List_t *stream) {
                     if (getRosNodeControl()->sendOdomBaseLinkTF()) {
                         geometry_msgs::TransformStamped transformStamped;
                         transformStamped.header.stamp = msg.header.stamp;
-                        transformStamped.header.frame_id = "odom";
+                        transformStamped.header.frame_id = "odin_odom";
                         transformStamped.child_frame_id = "odin1_base_link";
                         transformStamped.transform.translation.x = msg.pose.pose.position.x;
                         transformStamped.transform.translation.y = msg.pose.pose.position.y;
@@ -1497,17 +1506,19 @@ void publishRgb(capture_Image_List_t *stream) {
                     break;
                 case OdometryType::TRANSFORM:
                     {
+                    // ################################
+                    // C++: publish odin_map -> odin_odom relocalization TF (invert odom->map)
+                    // ################################
+                    tf2::Transform t_odom_map;
+                    t_odom_map.setOrigin(tf2::Vector3(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z));
+                    t_odom_map.setRotation(tf2::Quaternion(msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,
+                                                           msg.pose.pose.orientation.z, msg.pose.pose.orientation.w));
+                    tf2::Transform t_map_odom = t_odom_map.inverse();
                     geometry_msgs::TransformStamped transformStamped;
                     transformStamped.header.stamp = msg.header.stamp;
-                    transformStamped.header.frame_id = "odom";
-                    transformStamped.child_frame_id = "map";
-                    transformStamped.transform.translation.x = msg.pose.pose.position.x;
-                    transformStamped.transform.translation.y = msg.pose.pose.position.y;
-                    transformStamped.transform.translation.z = msg.pose.pose.position.z;
-                    transformStamped.transform.rotation.x = msg.pose.pose.orientation.x;
-                    transformStamped.transform.rotation.y = msg.pose.pose.orientation.y;
-                    transformStamped.transform.rotation.z = msg.pose.pose.orientation.z;
-                    transformStamped.transform.rotation.w = msg.pose.pose.orientation.w;
+                    transformStamped.header.frame_id = "odin_map";   // parent
+                    transformStamped.child_frame_id = "odin_odom";   // child
+                    transformStamped.transform = tf2::toMsg(t_map_odom);
                     tf_broadcaster->sendTransform(transformStamped);
                     }
                     break;
