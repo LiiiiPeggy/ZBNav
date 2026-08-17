@@ -15,13 +15,14 @@ ros2 run pcl_ros pcd_to_pointcloud --ros-args \
   -p file_name:="src/odin_ros_driver/map/map_20260807_151455.pcd" \
   -p tf_frame:=odin_map \
   -p publishing_period_ms:=10000 \
-  -r cloud_pcd:=/overall_map &
+  -r cloud_pcd:=/overall_map \
+  -r __node:=standalone_overall_map_publisher &
 
 # ################################
 # Bash: clean up map publisher when standalone viewer exits
 # ################################
 cleanup() {
-  pkill -f 'pcd_to_pointcloud' 2>/dev/null || true
+  pkill -f 'pcd_to_pointcloud.*standalone_overall_map_publisher' 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
