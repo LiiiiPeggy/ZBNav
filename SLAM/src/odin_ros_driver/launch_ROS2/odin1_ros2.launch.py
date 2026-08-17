@@ -7,6 +7,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     # Get package directory
@@ -25,7 +26,26 @@ def generate_launch_description():
         default_value=os.path.join(package_dir, 'config', 'odin_ros2.rviz'),
         description='Path to RViz2 config file'
     )
-    
+
+    # ################################
+    # Python: declare RViz-on and relocalization map publish options
+    # ################################
+    enable_rviz_arg = DeclareLaunchArgument(
+        'enable_rviz',
+        default_value='true',
+        description='Start the Odin RViz'
+    )
+    publish_overall_map_arg = DeclareLaunchArgument(
+        'publish_overall_map',
+        default_value='false',
+        description='Publish relocalization map PCD on /overall_map'
+    )
+    overall_map_pcd_arg = DeclareLaunchArgument(
+        'overall_map_pcd',
+        default_value='',
+        description='Path to the map PCD published on /overall_map'
+    )
+
     # Create main node
     host_sdk_node = Node(
         package='odin_ros_driver',
@@ -95,14 +115,39 @@ def generate_launch_description():
     )
 
     # Create RViz2 node - loads specified configuration file
+    # ################################
+    # Python: make Odin RViz optional via enable_rviz
+    # ################################
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
         name='rviz2',
         output='screen',
-        arguments=['-d', LaunchConfiguration('rviz_config')]
+        arguments=['-d', LaunchConfiguration('rviz_config')],
+        condition=IfCondition(LaunchConfiguration('enable_rviz'))
     )
-    
+
+    # ################################
+    # Python: optionally publish relocalization map on /overall_map
+    # ################################
+    overall_map_node = Node(
+        package='pcl_ros',
+        executable='pcd_to_pointcloud',
+        name='overall_map_publisher',
+        output='screen',
+        condition=IfCondition(
+            LaunchConfiguration('publish_overall_map')
+        ),
+        parameters=[{
+            'file_name': LaunchConfiguration('overall_map_pcd'),
+            'tf_frame': 'odin_map',
+            'publishing_period_ms': 10000,
+        }],
+        remappings=[
+            ('cloud_pcd', '/overall_map'),
+        ]
+    )
+
     # Create launch description
     ld = LaunchDescription()
     ld.add_action(config_file_arg)
@@ -113,5 +158,9 @@ def generate_launch_description():
     ld.add_action(cloud_reprojection_node)
     ld.add_action(image_overlay_node)
     ld.add_action(rviz_node)  # Add RViz node
-    
+    ld.add_action(enable_rviz_arg)
+    ld.add_action(publish_overall_map_arg)
+    ld.add_action(overall_map_pcd_arg)
+    ld.add_action(overall_map_node)
+
     return ld
