@@ -1,0 +1,34 @@
+# ################################
+# YAML: SLAM standalone saved-map viewer
+# ################################
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: OverallMap
+      Color Transformer: FlatColor
+      Position Transformer: XYZ
+      Style: Points
+      Size (Pixels): 2
+      Decay Time: 0
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /overall_map
+  Global Options:
+    Background Color: 0; 0; 0
+    Fixed Frame: odin_map
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
