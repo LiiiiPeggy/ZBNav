@@ -36,11 +36,9 @@ def generate_launch_description():
   global_frame = LaunchConfiguration('global_frame')
 
   # ################################
-  # Python: bind selectable RViz config and PCD map publisher launch args
+  # Python: bind selectable RViz config launch arg
   # ################################
   rviz_config_file = LaunchConfiguration('rviz_config_file')
-  enable_pcd_map = LaunchConfiguration('enable_pcd_map')
-  pcd_map_file = LaunchConfiguration('pcd_map_file')
 
   declare_cameraOffsetZ = DeclareLaunchArgument('cameraOffsetZ', default_value='0.0', description='')
   declare_vehicleX = DeclareLaunchArgument('vehicleX', default_value='0.0', description='')
@@ -69,16 +67,12 @@ def generate_launch_description():
   declare_global_frame = DeclareLaunchArgument('global_frame', default_value='odin_map', description='Map/relocalization frame')
 
   # ################################
-  # Python: declare selectable RViz config and PCD map publisher args
+  # Python: declare selectable RViz config launch arg
   # ################################
   declare_rviz_config_file = DeclareLaunchArgument(
     'rviz_config_file',
     default_value=os.path.join(get_package_share_directory('vehicle_simulator'), 'rviz', 'vehicle_simulator.rviz'),
     description='Path to RViz config file (default: vehicle_simulator.rviz)')
-  declare_enable_pcd_map = DeclareLaunchArgument(
-    'enable_pcd_map', default_value='false', description='Publish prebuilt map PCD on /overall_map (map-mode MULTI)')
-  declare_pcd_map_file = DeclareLaunchArgument(
-    'pcd_map_file', default_value='', description='Absolute path to prebuilt map PCD (used when enable_pcd_map=true)')
 
   start_local_planner = IncludeLaunchDescription(
     FrontendLaunchDescriptionSource(os.path.join(
@@ -167,25 +161,6 @@ def generate_launch_description():
     ]
   )
 
-  # ################################
-  # Python: publish prebuilt map PCD on /overall_map when enabled
-  # ################################
-  start_pcd_map = Node(
-    package='pcl_ros',
-    executable='pcd_to_pointcloud',
-    name='pcd_map_publisher',
-    output='screen',
-    condition=IfCondition(enable_pcd_map),
-    parameters=[{
-      'file_name': pcd_map_file,
-      'tf_frame': 'odin_map',
-      'publishing_period_ms': 10000,
-    }],
-    remappings=[
-      ('cloud_pcd', '/overall_map'),
-    ]
-  )
-
   delayed_start_rviz = TimerAction(
     period=8.0,
     actions=[
@@ -223,11 +198,9 @@ def generate_launch_description():
   ld.add_action(declare_global_frame)
 
   # ################################
-  # Python: add RViz config and PCD map publisher declarations
+  # Python: add selectable RViz config declaration
   # ################################
   ld.add_action(declare_rviz_config_file)
-  ld.add_action(declare_enable_pcd_map)
-  ld.add_action(declare_pcd_map_file)
 
   ld.add_action(start_local_planner)
   ld.add_action(start_cruise)
@@ -236,6 +209,5 @@ def generate_launch_description():
   ld.add_action(start_sensor_scan_generation)
   ld.add_action(start_joy)
   ld.add_action(delayed_start_rviz)
-  ld.add_action(start_pcd_map)
 
   return ld
