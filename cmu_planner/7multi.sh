@@ -23,7 +23,9 @@ if [[ "$mode" != "yaml" && "$mode" != "rviz" ]]; then
   echo "  bash 7multi.sh yaml             # YAML route, odin_odom frame (no map needed)"
   echo "  bash 7multi.sh yaml 3           # YAML route, odin_odom frame, 3 loops"
   echo "  bash 7multi.sh yaml -1 odin_map # YAML route in prebuilt map frame (needs Odin relocalization)"
-  echo "  bash 7multi.sh rviz -1 odin_map # RViz clicks in odin_map frame (needs Odin relocalization)"
+  echo "  bash 7multi.sh rviz -1 odin_map # Map-mode MULTI: opens cruise_map.rviz (Fixed Frame=odin_map,"
+  echo "                                  # OverallMap enabled) and auto-publishes /overall_map from the"
+  echo "                                  # prebuilt map PCD. Needs Odin relocalization."
   echo "Note: legacy 'odom'/'map' arguments are accepted and normalized."
   echo "      RViz Fixed Frame is 'odin_odom' (no-map) or 'odin_map'"
   echo "      (map mode); clicked waypoints are transformed to multi_frame."
@@ -40,6 +42,19 @@ if [[ "$frame" != "odin_odom" && "$frame" != "odin_map" ]]; then
   exit 1
 fi
 
+# ################################
+# Bash: enable map-mode RViz config and prebuilt map publisher
+# ################################
+map_args=()
+if [[ "$frame" == "odin_map" ]]; then
+  ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+  map_args+=(
+    rviz_config_file:="$ROOT/cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz"
+    enable_pcd_map:=true
+    pcd_map_file:="$ROOT/SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd"
+  )
+fi
+
 ros2 launch vehicle_simulator system_real_robot.launch \
   enableCruise:=true \
   multi_enabled:=true \
@@ -48,4 +63,5 @@ ros2 launch vehicle_simulator system_real_robot.launch \
   multi_frame:=$frame \
   loop_count:=$loop_count \
   rvizWaypointTopic:=/way_point_cruise \
+  "${map_args[@]}" \
   2>&1 | grep --line-buffered -E 'MULTI|CRUISE|WAYPOINT|WARN|ERROR'
