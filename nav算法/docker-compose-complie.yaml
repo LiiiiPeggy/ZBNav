@@ -1,0 +1,66 @@
+name: work_compile
+
+services:
+
+  compile:
+    image: nav_gui_snapshot:20260813
+    container_name: nav_compile
+
+    network_mode: host
+    ipc: host
+
+    # ################################
+    # Docker: use all CPU cores for compilation
+    # ################################
+    cpuset: "0-7"
+
+    privileged: true
+
+    environment:
+      ROS_DOMAIN_ID: "60"
+      FASTRTPS_DEFAULT_PROFILES_FILE: /root/env/ros2/rk3588_eth_binding.xml
+
+      TZ: Asia/Shanghai
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+
+      # Keep library internal threading controlled.
+      # colcon/CMake compilation parallelism is controlled separately.
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+
+    volumes:
+      - /dev:/dev:rw
+
+      - /home/siasun/panda3_2026_07_17/panda3/docker/env/ros2:/root/env/ros2:ro
+
+      # ################################
+      # Docker: share LQP workspace with Odin1 and navigation
+      # ################################
+      - /home/siasun/panda3_2026_07_17/panda3/src/lqp:/root/work/lqp:rw
+
+    working_dir: /root/work/lqp
+
+    stdin_open: true
+    tty: true
+
+    restart: "no"
+
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+
+        source /opt/ros/humble/setup.bash
+
+        echo "======================================"
+        echo " Compile container started"
+        echo " CPU affinity: 0-7"
+        echo " Workspace: /root/work/lqp"
+        echo "======================================"
+
+        taskset -cp $$$$ || true
+        nproc
+
+        exec bash

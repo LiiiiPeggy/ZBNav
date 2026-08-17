@@ -1,0 +1,76 @@
+name: work_odin1
+
+services:
+
+  odin1:
+    image: nav_gui_snapshot:20260813
+    container_name: odin1
+
+    network_mode: host
+    ipc: host
+
+    # ################################
+    # Docker: bind Odin1 data transport to CPU 0
+    # ################################
+    cpuset: "6"
+
+    privileged: true
+
+    environment:
+      DISPLAY: ${DISPLAY}
+      XAUTHORITY: /root/.Xauthority
+      QT_X11_NO_MITSHM: "1"
+
+      ROS_DOMAIN_ID: "60"
+      FASTRTPS_DEFAULT_PROFILES_FILE: /root/env/ros2/rk3588_eth_binding.xml
+
+      TZ: Asia/Shanghai
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /home/siasun/.Xauthority:/root/.Xauthority:ro
+
+      - /dev:/dev:rw
+
+      - /home/siasun/panda3_2026_07_17/panda3/docker/env/ros2:/root/env/ros2:ro
+
+      # ################################
+      # Docker: mount LQP workspace
+      # ################################
+      - /home/siasun/panda3_2026_07_17/panda3/src/lqp:/root/work/lqp:rw
+
+    working_dir: /root/work/lqp
+
+    stdin_open: true
+    tty: true
+
+    restart: unless-stopped
+
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+
+        apt-get update
+
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          x11-apps \
+          usbutils
+
+        source /opt/ros/humble/setup.bash
+
+        echo "======================================"
+        echo " Odin1 container started"
+        echo " CPU affinity: 0"
+        echo " Workspace: /root/work/lqp"
+        echo "======================================"
+
+        taskset -cp $$ || true
+
+        exec bash
