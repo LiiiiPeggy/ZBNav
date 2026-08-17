@@ -18,13 +18,11 @@ ros2 run pcl_ros pcd_to_pointcloud --ros-args \
   -p publishing_period_ms:=10000 \
   -r cloud_pcd:=/overall_map &
 
-MAP_PID=$!
-
 # ################################
 # Bash: clean up map publisher when standalone viewer exits
 # ################################
 cleanup() {
-  kill "$MAP_PID" 2>/dev/null || true
+  pkill -f 'pcd_to_pointcloud' 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
