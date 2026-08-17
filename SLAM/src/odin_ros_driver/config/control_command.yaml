@@ -165,7 +165,7 @@ register_keys:
 
   # 重定位所使用地图文件的绝对路径。
   # custom_map_mode=2 时必须填写，否则重定位启动会失败。
-  relocalization_map_abs_path: "/home/siasun/panda3_2026_07_17/panda3/src/lqp/SLAM/src/odin_ros_driver/map/map_20260807_151455.bin"
+  relocalization_map_abs_path: "/root/work/lqp/SLAM/src/odin_ros_driver/map/map_20260807_151455.bin"
 
   # 保存建图结果时，可使用驱动提供的 set_param.sh 脚本：
   # ./set_param.sh save_map 1
