@@ -178,6 +178,9 @@ Visualization Manager:
             Value: true
           Enabled: true
           Keep: 1
+# ################################
+# YAML: subscribe Odin RViz Odometry display to /state_estimation
+# ################################
           Name: Odometry
           Position Tolerance: 0.10000000149011612
           Shape:
@@ -196,7 +199,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /odin1/odometry
+            Value: /state_estimation
           Value: true
         - Angle Tolerance: 0.10000000149011612
           Class: rviz_default_plugins/Odometry
@@ -410,7 +413,10 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: odom
+# ################################
+# YAML: use odin_odom as Odin RViz fixed frame
+# ################################
+    Fixed Frame: odin_odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -469,7 +475,10 @@ Visualization Manager:
       Name: Current View
       Near Clip Distance: 0.009999999776482582
       Pitch: 0.3953983187675476
-      Target Frame: odom
+# ################################
+# YAML: align view target frame with odin_odom
+# ################################
+      Target Frame: odin_odom
       Value: Orbit (rviz)
       Yaw: 3.230407953262329
     Saved: ~
