@@ -116,6 +116,15 @@ The `.bin` map is transferred from the device to
 `mapping_result_file_name` if set). Note this map is geometric only — it
 does **not** contain RGB color; it is for relocalization, not visualization.
 
+To view the map (or publish it as `/overall_map`), convert it to a PCD:
+```bash
+cd SLAM
+bash 4trans2pcd.sh    # .bin -> .ply   (map_to_ply_arm64/amd64, auto-selected by arch)
+bash 5downsample.sh   # .ply -> .pcd   (map_downsample VoxelGrid, default leaf 0.05)
+```
+`4trans2pcd.sh [input.bin] [output.ply]` / `5downsample.sh [input.ply] [output.pcd] [leaf_size]`,
+both default to `map_20260807_151455.{bin,ply}` under `src/odin_ros_driver/map/`.
+
 **Relocalize** (mode `2`): set `relocalization_map_abs_path` to the saved
 `.bin`, then launch via `SLAM/3run_relocalization.sh`. On success the driver
 outputs the `odin_map → odin_odom` TF; `/state_estimation` and
@@ -151,7 +160,9 @@ Convenience scripts live in the workspace root (`1.sh`) and `cmu_planner/`:
 | `cmu_planner/9multi_debug.sh` | MULTI cruise, full output |
 | `SLAM/2run_slam.sh` | Odin SLAM mapping (mode 1), Odin RViz on, no `/overall_map` |
 | `SLAM/3run_relocalization.sh` | Odin relocalization (mode 2), Odin RViz on, publishes `/overall_map` |
-| `SLAM/showmap.sh` | Standalone saved-map viewer (own `/overall_map` + `overall_map.rviz`) |
+| `SLAM/4trans2pcd.sh` | Convert saved `.bin` map to `.ply` via `map_to_ply` (arm64/amd64 auto-selected) |
+| `SLAM/5downsample.sh` | Downsample `.ply` → `.pcd` via `map_downsample` VoxelGrid (default leaf 0.05) |
+| `SLAM/showmap.sh` | Standalone saved-map viewer — `bash showmap.sh [map.pcd]` (optional PCD path, default the prebuilt map); starts its own `/overall_map` + `overall_map.rviz` |
 
 ## Cruise Patrol (往返巡航)
 
