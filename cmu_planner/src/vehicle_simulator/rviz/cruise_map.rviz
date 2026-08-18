@@ -85,7 +85,7 @@ Visualization Manager:
         Value: /registered_scan
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 0.20000000298023224
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -255,7 +255,7 @@ Visualization Manager:
         Value: /free_paths
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz_default_plugins/PointStamped
       Color: 204; 41; 204
