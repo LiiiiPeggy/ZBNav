@@ -15,7 +15,7 @@ Visualization Manager:
     # ################################
     # YAML: render OverallMap efficiently for smooth camera control
     # ################################
-    - Alpha: 1
+    - Alpha: 0.3
       Class: rviz_default_plugins/PointCloud2
       Color Transformer: FlatColor
       Decay Time: 0
