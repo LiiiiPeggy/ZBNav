@@ -9,15 +9,20 @@ Panels:
 Visualization Manager:
   Class: ""
   Displays:
-    - Class: rviz_default_plugins/Grid
-      Name: Grid
-      Enabled: true
     # ################################
-    # YAML: render OverallMap efficiently for smooth camera control
+    # YAML: disable Grid in saved-map viewer
+    # ################################
+    - Class: rviz_default_plugins/Grid
+      Enabled: false
+      Name: Grid
+      Value: false
+    # ################################
+    # YAML: configure OverallMap display for saved-map viewing
     # ################################
     - Alpha: 0.3
+      Axis: Z
       Class: rviz_default_plugins/PointCloud2
-      Color Transformer: FlatColor
+      Color Transformer: AxisColor
       Decay Time: 0
       Enabled: true
       Name: OverallMap
