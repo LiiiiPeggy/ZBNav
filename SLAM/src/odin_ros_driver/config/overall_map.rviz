@@ -39,6 +39,16 @@ Visualization Manager:
   Global Options:
     Background Color: 0; 0; 0
     Fixed Frame: odin_map
+    Frame Rate: 15
+  # ################################
+  # YAML: enable camera interaction in standalone map viewer
+  # ################################
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+      Value: true
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
