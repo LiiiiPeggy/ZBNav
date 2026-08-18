@@ -117,9 +117,21 @@ The `.bin` map is transferred from the device to
 does **not** contain RGB color; it is for relocalization, not visualization.
 
 **Relocalize** (mode `2`): set `relocalization_map_abs_path` to the saved
-`.bin`, then relaunch the driver. On success the driver outputs the
-`map → odom` TF, so `/state_estimation` and `/registered_scan` are in the
-map frame.
+`.bin`, then launch via `SLAM/3run_relocalization.sh`. On success the driver
+outputs the `odin_map → odin_odom` TF; `/state_estimation` and
+`/registered_scan` are in the `odin_odom` planning frame, and the saved map
+is published as `/overall_map` (`frame_id=odin_map`).
+
+The driver config is split for the two run modes (each a copy of the active
+`control_command.yaml`, differing only in `custom_map_mode`):
+- `control_command_slam.yaml` — `custom_map_mode: 1` (mapping), launched by
+  `SLAM/2run_slam.sh` (Odin RViz on, no `/overall_map`).
+- `control_command_relocalization.yaml` — `custom_map_mode: 2`, launched by
+  `SLAM/3run_relocalization.sh` (Odin RViz on, publishes `/overall_map`).
+
+`SLAM/showmap.sh` is a standalone offline viewer of the saved `.pcd` (starts
+its own `/overall_map` publisher + `overall_map.rviz`) — do not run it at the
+same time as `3run_relocalization.sh` (both would publish `/overall_map`).
 
 ### Option C: Odin + one-click scripts
 
@@ -134,6 +146,12 @@ Convenience scripts live in the workspace root (`1.sh`) and `cmu_planner/`:
 | `cmu_planner/4debug_cruise.sh` | Launch planner with cruise, full output (debug) |
 | `cmu_planner/5repeat180.sh` | Launch planner with **repeat cruise**, filtered to `[REPEAT]`/`[CRUISE]`; `./5repeat180.sh [N]` = N round-trips, default infinite (turn_angle=180°) |
 | `cmu_planner/6debug_repeat.sh` | Launch planner with repeat cruise, full output (debug) |
+| `cmu_planner/7multi.sh` | Launch planner with **MULTI cruise** (`[yaml|rviz] [loop_count] [odin_odom|odin_map]`); `odin_map` auto-opens `cruise_map.rviz` and consumes the SLAM-published `/overall_map` |
+| `cmu_planner/8multi_start.sh` | Call `/multi_start` to start a collected RViz route |
+| `cmu_planner/9multi_debug.sh` | MULTI cruise, full output |
+| `SLAM/2run_slam.sh` | Odin SLAM mapping (mode 1), Odin RViz on, no `/overall_map` |
+| `SLAM/3run_relocalization.sh` | Odin relocalization (mode 2), Odin RViz on, publishes `/overall_map` |
+| `SLAM/showmap.sh` | Standalone saved-map viewer (own `/overall_map` + `overall_map.rviz`) |
 
 ## Cruise Patrol (往返巡航)
 
@@ -220,6 +238,34 @@ Repeat log output (filter with `grep REPEAT`):
 [REPEAT][LOOP] loop 2/3 start: ...
 [REPEAT] Cruise complete after 3 loops
 ```
+
+## Multi-Point Cruise (MULTI 多点巡航)
+
+`cruiseController` in MULTI mode follows a closed-loop waypoint route collected
+in RViz or from a YAML route file.
+
+```bash
+cd cmu_planner
+bash 7multi.sh                    # default: RViz clicks, odin_odom frame (no map needed)
+bash 7multi.sh rviz -1 odin_map   # map-mode MULTI: cruise_map.rviz + SLAM /overall_map
+bash 7multi.sh yaml -1 odin_map   # YAML route in map frame
+```
+
+- **Waypoints**: `MultiWaypointTool` RViz clicks (carrying the current RViz
+  Fixed Frame) or `multi_route.yaml` (`multi_source:=yaml|rviz`). Stored in
+  `multi_frame` (`odin_odom` no-map mode, `odin_map` map mode).
+- **Map-mode MULTI** (`7multi.sh rviz -1 odin_map`): requires the SLAM stack —
+  run `SLAM/3run_relocalization.sh` first (relocalized, `/overall_map`
+  published). `7multi.sh` opens `cruise_map.rviz` (Fixed Frame `odin_map`,
+  `OverallMap` enabled). Two RViz may coexist: the Odin RViz (monitoring
+  localization) and `cruise_map.rviz` (marking waypoints). Do NOT run
+  `SLAM/showmap.sh` at the same time (both publish `/overall_map`).
+- **Start / stop**: `/multi_start` (Trigger) starts the route; `/cruise_autonomy`
+  locks planner autonomy during MULTI so `/joy` jitter cannot clear it;
+  `/stop` with `data=2` aborts.
+
+Usage: `bash 7multi.sh [yaml|rviz] [loop_count] [odin_odom|odin_map]` (defaults
+rviz / -1 / odin_odom; legacy `odom`/`map` accepted and normalized).
 
 ## Data Flow Check
 
