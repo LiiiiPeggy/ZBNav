@@ -534,9 +534,8 @@ Visualization Manager:
 # ################################
 # Operator note: MULTI waypoint clicks carry the RViz Fixed Frame.
 # - This config presets Fixed Frame = odin_map (map-mode MULTI).
-# - Requires Odin relocalization (custom_map_mode: 2) so the odin_map ->
-#   odin_odom TF is active; /overall_map is published automatically when
-#   map mode is started via 7multi.sh.
+# - Requires Odin relocalization (custom_map_mode: 2) via SLAM/3run_relocalization.sh,
+#   which publishes /overall_map; 7multi.sh rviz -1 odin_map consumes it.
     Fixed Frame: odin_map
     Frame Rate: 15
   Name: root
