@@ -12,14 +12,19 @@ Visualization Manager:
     - Class: rviz_default_plugins/Grid
       Name: Grid
       Enabled: true
-    - Class: rviz_default_plugins/PointCloud2
+    # ################################
+    # YAML: render OverallMap efficiently for smooth camera control
+    # ################################
+    - Alpha: 1
+      Class: rviz_default_plugins/PointCloud2
+      Color Transformer: FlatColor
+      Decay Time: 0
       Enabled: true
       Name: OverallMap
-      Color Transformer: FlatColor
       Position Transformer: XYZ
+      Selectable: false
+      Size (Pixels): 1
       Style: Points
-      Size (Pixels): 2
-      Decay Time: 0
       Topic:
         Depth: 5
         Durability Policy: Volatile
