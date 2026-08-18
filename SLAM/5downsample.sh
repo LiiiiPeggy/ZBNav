@@ -8,7 +8,7 @@ source install/setup.bash
 # Bash: run map_downsample PLY->VoxelGrid->PCD
 # ################################
 # Run from the SLAM workspace root. Usage:
-#   bash 3map.sh [input.ply] [output.pcd] [leaf_size]
+#   bash 5downsample.sh [input.ply] [output.pcd] [leaf_size]
 #   defaults: input = prebuilt Odin map PLY, output = input with .ply->.pcd, leaf = 0.05
 input=${1:-src/odin_ros_driver/map/map_20260807_151455.ply}
 
