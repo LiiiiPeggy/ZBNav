@@ -11,13 +11,14 @@ source "$SCRIPT_DIR/install/setup.bash"
 # ################################
 cd "$SCRIPT_DIR"
 
-# Optional arg: which PCD under src/odin_ros_driver/map/ to view.
-#   bash showmap.sh            -> map_20260807_151455.pcd (default)
-#   bash showmap.sh maptest.pcd -> src/odin_ros_driver/map/maptest.pcd
-map_file=${1:-map_20260807_151455.pcd}
+# Optional arg: the map PCD to view, used as-is (absolute path, or relative to
+# the SLAM workspace root — the script cds there). Default is the prebuilt map.
+#   bash showmap.sh                       -> src/odin_ros_driver/map/map_20260807_151455.pcd
+#   bash showmap.sh /path/to/maptest.pcd  -> that file
+map_file=${1:-src/odin_ros_driver/map/map_20260807_151455.pcd}
 
 ros2 run pcl_ros pcd_to_pointcloud --ros-args \
-  -p file_name:="src/odin_ros_driver/map/$map_file" \
+  -p file_name:="$map_file" \
   -p tf_frame:=odin_map \
   -p publishing_period_ms:=10000 \
   -r cloud_pcd:=/overall_map \
