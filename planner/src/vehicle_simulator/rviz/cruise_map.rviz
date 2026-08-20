@@ -553,6 +553,11 @@ Visualization Manager:
 # ################################
     - Class: waypoint_rviz_plugin/MultiWaypointTool
       Name: Multi Waypoint
+# ################################
+# YAML: add Start Multi trigger tool
+# ################################
+    - Class: waypoint_rviz_plugin/MultiStartTool
+      Name: Start Multi
   Transformation:
     Current:
       Class: rviz_default_plugins/TF
