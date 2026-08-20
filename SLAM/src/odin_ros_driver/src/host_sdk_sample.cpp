@@ -2177,6 +2177,18 @@ int main(int argc, char *argv[])
     #endif
         std::string config_dir = package_path + "/config";
         std::string config_file = config_dir + "/control_command.yaml";
+        // ################################
+        // C++: use ROS2 config_file override with legacy default fallback
+        // ################################
+#ifdef ROS2
+        node->declare_parameter<std::string>("config_file", config_file);
+        config_file = node->get_parameter("config_file").as_string();
+
+        RCLCPP_INFO(
+          node->get_logger(),
+          "Using control config: %s",
+          config_file.c_str());
+#endif
 
         // Initialize command file path to /tmp/odin_command.txt
         g_command_file_path = "/tmp/odin_command.txt";
