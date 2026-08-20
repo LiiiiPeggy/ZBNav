@@ -34,6 +34,10 @@ enum class CruiseState {
   GO_TO_WAYPOINT = 7,
   TURN_AT_WAYPOINT = 8,
   WAIT_AT_WAYPOINT = 9,
+  // ################################
+  // C++: add ready-to-start state shared by all cruise modes
+  // ################################
+  READY_TO_START = 10,
 };
 
 // ################################
@@ -164,9 +168,6 @@ public:
       add_sub_ = this->create_subscription<geometry_msgs::msg::PointStamped>(
         "/multi_waypoint_add", 10,
         std::bind(&CruiseController::addWaypointCallback, this, std::placeholders::_1));
-      start_srv_ = this->create_service<std_srvs::srv::Trigger>(
-        "/multi_start",
-        std::bind(&CruiseController::startService, this, std::placeholders::_1, std::placeholders::_2));
       // ################################
       // C++: publish cruise autonomy lock for MULTI mode
       // ################################
@@ -175,13 +176,22 @@ public:
       cruise_autonomy_pub_ = this->create_publisher<std_msgs::msg::Bool>(
         "/cruise_autonomy", 10);
     }
+    // ################################
+    // C++: always create /multi_start for unified SINGLE/REPEAT/MULTI start
+    // ################################
+    // SINGLE/REPEAT/MULTI all park at READY_TO_START and need the same
+    // explicit "Start Multi" trigger; the service is therefore unconditional.
+    start_srv_ = this->create_service<std_srvs::srv::Trigger>(
+      "/multi_start",
+      std::bind(&CruiseController::startService, this, std::placeholders::_1, std::placeholders::_2));
 
     // ################################
     // C++: MULTI setup enter WAIT_LOCALIZATION
     // ################################
-    // MULTI mode setup — MUST be after markers_pub_ creation (Step 7)
-    // BOTH sources enter WAIT_LOCALIZATION first; Task 4's gate then dispatches
-    // to beginMultiCruise() (yaml) or COLLECTING_WAYPOINTS (rviz).
+    // MULTI mode setup — MUST be after markers_pub_ creation (Step 7).
+    // BOTH sources enter WAIT_LOCALIZATION first; the gate then dispatches
+    // to READY_TO_START (yaml) or COLLECTING_WAYPOINTS (rviz). Neither begins
+    // moving — an explicit /multi_start is required for every cruise mode.
     // The gate requires /state_estimation always, and the relocalization TF
     // only when multi_frame_=="map".
     if (multi_enabled_) {
@@ -232,6 +242,7 @@ private:
       case CruiseState::GO_TO_WAYPOINT: return "GO_TO_WAYPOINT";
       case CruiseState::TURN_AT_WAYPOINT: return "TURN_AT_WAYPOINT";
       case CruiseState::WAIT_AT_WAYPOINT: return "WAIT_AT_WAYPOINT";
+      case CruiseState::READY_TO_START: return "READY_TO_START";
       default: return "UNKNOWN";
     }
   }
@@ -282,8 +293,17 @@ private:
       return;
     }
 
-    // Repeat mode: accept new waypoint even while cruising (retarget + reset)
-    if (repeat_enabled_ && state_ != CruiseState::IDLE) {
+    // ################################
+    // C++: running-state retarget is only for REPEAT while actually cruising
+    // ################################
+    // Matches only the running states — READY_TO_START is NOT "already
+    // cruising", so a re-click while parked must not fire sendWaypointAndGo().
+    const bool running_state =
+      state_ == CruiseState::GO_TO_DEST ||
+      state_ == CruiseState::TURN_AT_DEST ||
+      state_ == CruiseState::RETURN_TO_START ||
+      state_ == CruiseState::TURN_AT_START;
+    if (repeat_enabled_ && running_state) {
       dest_x_ = goal.point.x;
       dest_y_ = goal.point.y;
       start_x_ = current_x_;
@@ -298,22 +318,31 @@ private:
       return;
     }
 
-    if (state_ != CruiseState::IDLE) {
+    if (state_ != CruiseState::IDLE && state_ != CruiseState::READY_TO_START) {
       RCLCPP_WARN(this->get_logger(),
         "Already cruising, ignoring new waypoint");
       return;
     }
 
-    // 收到目标时锁定起点（当前实时位置）
+    // ################################
+    // C++: prepare destination but hold at READY_TO_START until /multi_start
+    // ################################
+    // Both the first click (IDLE) and a re-click while parked (READY_TO_START)
+    // update the pending destination and STAY parked — no /way_point, no motion.
     start_x_ = current_x_;
     start_y_ = current_y_;
-
     dest_x_ = goal.point.x;
     dest_y_ = goal.point.y;
+    if (repeat_enabled_) {
+      completed_loops_ = 0;
+      pending_stop_ = false;
+      turning_internal_ = false;
+    }
+    state_ = CruiseState::READY_TO_START;
     RCLCPP_INFO(this->get_logger(),
-      "[CRUISE][INPUT] start=(%.3f, %.3f), destination=(%.3f, %.3f)",
+      "%s Destination prepared: start=(%.3f, %.3f), dest=(%.3f, %.3f); press Start Multi to begin",
+      repeat_enabled_ ? "[REPEAT]" : "[CRUISE]",
       start_x_, start_y_, dest_x_, dest_y_);
-    sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
   }
 
   void stopCallback(const std_msgs::msg::Int8::ConstSharedPtr msg)
@@ -492,15 +521,24 @@ private:
       RCLCPP_INFO(this->get_logger(),
         "[MULTI] Pose ready (frame=%s), proceeding", multi_frame_.c_str());
       if (multi_source_ == "yaml") {
-        if (waypoints_.size() >= 2) {
-          beginMultiCruise();
-        } else {
-          state_ = CruiseState::IDLE;
+        if (waypoints_.size() < 2) {
+          RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+            "[MULTI] YAML route has <2 waypoints (%zu); cannot enter ready-to-start",
+            waypoints_.size());
+          return;  // stay in WAIT_LOCALIZATION; never auto-start
         }
+        // ################################
+        // C++: hold YAML route at READY_TO_START until explicit /multi_start
+        // ################################
+        state_ = CruiseState::READY_TO_START;
+        RCLCPP_INFO(this->get_logger(),
+          "[MULTI] YAML route ready (%zu waypoints); press Start Multi or call /multi_start to begin",
+          waypoints_.size());
+        publishMarkers();
       } else {
         state_ = CruiseState::COLLECTING_WAYPOINTS;
         RCLCPP_INFO(this->get_logger(),
-          "[MULTI] RViz mode: click waypoints (any frame, auto-converted to %s), then call /multi_start",
+          "[MULTI] RViz mode: click waypoints (any frame, auto-converted to %s), then press Start Multi",
           multi_frame_.c_str());
         publishMarkers();
       }
@@ -508,6 +546,13 @@ private:
     }
 
     switch (state_) {
+    case CruiseState::READY_TO_START:
+      // ################################
+      // C++: parked until explicit /multi_start grants motion
+      // ################################
+      // Explicit case (do not rely on switch fall-through): robot holds still.
+      return;
+
     case CruiseState::IDLE:
       return;
 
@@ -1068,49 +1113,96 @@ private:
     std::shared_ptr<std_srvs::srv::Trigger::Response> res)
   {
     (void)req;
-    // /multi_start is only valid in rviz mode + COLLECTING_WAYPOINTS state
-    if (multi_source_ != "rviz" || state_ != CruiseState::COLLECTING_WAYPOINTS) {
-      res->success = false;
-      res->message = "/multi_start only valid in rviz COLLECTING_WAYPOINTS";
-      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
-      return;
-    }
-    if (waypoints_.size() < 2) {
-      res->success = false;
-      res->message = "At least 2 waypoints are required";
-      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
-      return;
-    }
-    if (!has_odom_) {
-      res->success = false;
-      res->message = "/state_estimation not available";
-      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
-      return;
-    }
     // ################################
-    // C++: gate /multi_start on relocalization TF only in map mode
+    // C++: unified explicit start for SINGLE / REPEAT / MULTI
     // ################################
-    // odom mode starts with /state_estimation only; map mode additionally
-    // needs the relocalization TF (re-checked at start time).
-    if (multi_frame_ == "odin_map" &&
-        !tf_buffer_.canTransform(planning_frame_, global_frame_, tf2::TimePointZero)) {
+    // The mode decides what starts; only the "explicit authorization" concept
+    // is shared. MULTI keeps its existing route/odom/TF checks; SINGLE/REPEAT
+    // rely on the has_odom_ gate in waypointCallback that prepared the goal.
+    if (multi_enabled_) {
+      // MULTI: rviz COLLECTING_WAYPOINTS or yaml READY_TO_START, both >=2 waypoints
+      const bool startable =
+        (multi_source_ == "rviz" && state_ == CruiseState::COLLECTING_WAYPOINTS) ||
+        (multi_source_ == "yaml" && state_ == CruiseState::READY_TO_START);
+      if (!startable) {
+        const bool running =
+          state_ == CruiseState::GO_TO_WAYPOINT ||
+          state_ == CruiseState::TURN_AT_WAYPOINT ||
+          state_ == CruiseState::WAIT_AT_WAYPOINT;
+        res->success = false;
+        res->message = running
+          ? "Multi cruise already running"
+          : "/multi_start not valid in current state";
+        RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+        return;
+      }
+      if (waypoints_.size() < 2) {
+        res->success = false;
+        res->message = "At least 2 waypoints are required";
+        RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+        return;
+      }
+      if (!has_odom_) {
+        res->success = false;
+        res->message = "/state_estimation not available";
+        RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+        return;
+      }
+      // ################################
+      // C++: gate /multi_start on relocalization TF only in map mode
+      // ################################
+      // odom mode starts with /state_estimation only; map mode additionally
+      // needs the relocalization TF (re-checked at start time).
+      if (multi_frame_ == "odin_map" &&
+          !tf_buffer_.canTransform(planning_frame_, global_frame_, tf2::TimePointZero)) {
+        res->success = false;
+        res->message = "odin_map -> odin_odom TF not available";
+        RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+        return;
+      }
+      res->success = true;
+      res->message = "Starting multi cruise";
+      RCLCPP_INFO(this->get_logger(), "[MULTI] /multi_start accepted; starting cruise");
+      // ################################
+      // C++: lock cruise autonomy before MULTI waypoints drive
+      // ################################
+      // With the lock set, localPlanner/pathFollower ignore /joy (real PS3
+      // controller jitter must not clear autonomyMode during MULTI).
+      std_msgs::msg::Bool autonomy_msg;
+      autonomy_msg.data = true;
+      cruise_autonomy_pub_->publish(autonomy_msg);
+      beginMultiCruise();
+      return;
+    }
+
+    if (repeat_enabled_) {
+      if (state_ != CruiseState::READY_TO_START) {
+        res->success = false;
+        res->message = "Repeat cruise is not ready to start";
+        RCLCPP_WARN(this->get_logger(), "[REPEAT] %s", res->message.c_str());
+        return;
+      }
+      res->success = true;
+      res->message = "Starting repeat cruise";
+      RCLCPP_INFO(this->get_logger(), "[REPEAT] /multi_start accepted; starting cruise");
+      completed_loops_ = 0;
+      pending_stop_ = false;
+      turning_internal_ = false;
+      sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
+      return;
+    }
+
+    // SINGLE
+    if (state_ != CruiseState::READY_TO_START) {
       res->success = false;
-      res->message = "odin_map -> odin_odom TF not available";
-      RCLCPP_WARN(this->get_logger(), "[MULTI] %s", res->message.c_str());
+      res->message = "Single cruise is not ready to start";
+      RCLCPP_WARN(this->get_logger(), "[CRUISE] %s", res->message.c_str());
       return;
     }
     res->success = true;
-    res->message = "Starting multi cruise";
-    RCLCPP_INFO(this->get_logger(), "[MULTI] /multi_start accepted; starting cruise");
-    // ################################
-    // C++: lock cruise autonomy before MULTI waypoints drive
-    // ################################
-    // With the lock set, localPlanner/pathFollower ignore /joy (real PS3
-    // controller jitter must not clear autonomyMode during MULTI).
-    std_msgs::msg::Bool autonomy_msg;
-    autonomy_msg.data = true;
-    cruise_autonomy_pub_->publish(autonomy_msg);
-    beginMultiCruise();
+    res->message = "Starting single cruise";
+    RCLCPP_INFO(this->get_logger(), "[CRUISE] /multi_start accepted; starting cruise");
+    sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
   }
 
   // ################################
