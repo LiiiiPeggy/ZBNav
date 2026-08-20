@@ -24,6 +24,7 @@ find_package(rviz_ogre_vendor REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(rclcpp REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
@@ -31,6 +32,7 @@ set(CMAKE_AUTOMOC ON)
 set(HDR_FILES
     include/waypoint_tool.hpp
     include/multi_waypoint_tool.hpp
+    include/multi_start_tool.hpp
 )
 
 foreach(header "${HDR_FILES}")
@@ -40,14 +42,16 @@ endforeach()
 set(HDR_FILES
     include/waypoint_tool.hpp
     include/multi_waypoint_tool.hpp
+    include/multi_start_tool.hpp
 )
 
 # ################################
-# CMake: add MultiWaypointTool source
+# CMake: add MultiWaypointTool and MultiStartTool sources
 # ################################
 set(SRC_FILES
   src/waypoint_tool.cpp
   src/multi_waypoint_tool.cpp
+  src/multi_start_tool.cpp
 )
 
 include_directories(include)
@@ -64,6 +68,7 @@ ament_target_dependencies(${PROJECT_NAME}
   "rviz_default_plugins"
   "rviz2"
   "std_msgs"
+  "std_srvs"
   )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -86,7 +91,8 @@ ament_export_dependencies(
   sensor_msgs
   rviz_default_plugins
   rviz2
-  std_msgs)
+  std_msgs
+  std_srvs)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

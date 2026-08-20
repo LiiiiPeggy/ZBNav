@@ -16,4 +16,14 @@
       Add MULTI cruise waypoints on the RViz XY plane without requiring point-cloud hits.
     </description>
   </class>
+  <!-- ################################ -->
+  <!-- XML: register Start Multi trigger tool -->
+  <!-- ################################ -->
+  <class name="waypoint_rviz_plugin/MultiStartTool"
+         type="waypoint_rviz_plugin::MultiStartTool"
+         base_class_type="rviz_common::Tool">
+    <description>
+      Fire /multi_start to begin the prepared cruise route. Legality checks are done by cruiseController.
+    </description>
+  </class>
 </library>
