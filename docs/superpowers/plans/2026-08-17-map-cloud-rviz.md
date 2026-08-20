@@ -19,16 +19,16 @@
 
 ## Context
 
-- `cmu_planner/7multi.sh` (committed): launches ONLY `system_real_robot.launch` with `enableCruise:=true multi_enabled:=true repeat_enabled:=false multi_source:=$mode multi_frame:=$frame loop_count:=$loop_count rvizWaypointTopic:=/way_point_cruise`, output filtered by `grep -E 'MULTI|CRUISE|WAYPOINT|WARN|ERROR'`. Frame normalization: `odom→odin_odom`, `map→odin_map`.
-- `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` (committed): hardcodes `rviz_config_file = os.path.join(get_package_share_directory('vehicle_simulator'), 'rviz', 'vehicle_simulator.rviz')` and launches `rviz2 -d <that>` behind a `TimerAction(period=8.0)`; already imports `IfCondition` (used by `start_cruise`).
-- `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` (committed, no-map mode): Fixed Frame `odin_odom`; `OverallMap` PointCloud2 display (Topic `/overall_map`, Color 255;255;255, FlatColor, Style Points, Size(m) 0.01) present but **disabled** (`Enabled: false` at L345, trailing `Value: false` at L366, block header `- Alpha: 0.10000000149011612` at L333); frame marker + operator note at L523-530. Contains `MultiWaypoints`, `Waypoint`, `PathViz`, `TerrainMap`, `MultiWaypointTool`.
-- `cmu_planner/showmap.sh` (committed `f34756c`, user-verified; originally authored as `7showmap.sh`): `pcd_to_pointcloud` with `-p file_name:="src/odin_ros_driver/map/map_20260807_151455.pcd" -p tf_frame:=odin_map -p publishing_period_ms:=10000 -r cloud_pcd:=/overall_map`, run after `cd "$(dirname "$0")/../SLAM"`.
+- `planner/7multi.sh` (committed): launches ONLY `system_real_robot.launch` with `enableCruise:=true multi_enabled:=true repeat_enabled:=false multi_source:=$mode multi_frame:=$frame loop_count:=$loop_count rvizWaypointTopic:=/way_point_cruise`, output filtered by `grep -E 'MULTI|CRUISE|WAYPOINT|WARN|ERROR'`. Frame normalization: `odom→odin_odom`, `map→odin_map`.
+- `planner/src/vehicle_simulator/launch/system_real_robot.launch` (committed): hardcodes `rviz_config_file = os.path.join(get_package_share_directory('vehicle_simulator'), 'rviz', 'vehicle_simulator.rviz')` and launches `rviz2 -d <that>` behind a `TimerAction(period=8.0)`; already imports `IfCondition` (used by `start_cruise`).
+- `planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` (committed, no-map mode): Fixed Frame `odin_odom`; `OverallMap` PointCloud2 display (Topic `/overall_map`, Color 255;255;255, FlatColor, Style Points, Size(m) 0.01) present but **disabled** (`Enabled: false` at L345, trailing `Value: false` at L366, block header `- Alpha: 0.10000000149011612` at L333); frame marker + operator note at L523-530. Contains `MultiWaypoints`, `Waypoint`, `PathViz`, `TerrainMap`, `MultiWaypointTool`.
+- `planner/showmap.sh` (committed `f34756c`, user-verified; originally authored as `7showmap.sh`): `pcd_to_pointcloud` with `-p file_name:="src/odin_ros_driver/map/map_20260807_151455.pcd" -p tf_frame:=odin_map -p publishing_period_ms:=10000 -r cloud_pcd:=/overall_map`, run after `cd "$(dirname "$0")/../SLAM"`.
 - Measured: `pcd_to_pointcloud` (volatile publisher) emits the first message on the first 10 s timer tick (~10 s after node start), then every 10 s.
 - Map files are git-ignored, machine-local: `SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` (PointXYZ, 405,532 points) + `.bin` (device relocalization map, `custom_map_mode: 2`).
 
 ## Global Constraints
 
-- **cmu_planner only.** Never modify any file under `SLAM/` (the map PCD is only READ at runtime).
+- **planner only.** Never modify any file under `SLAM/` (the map PCD is only READ at runtime).
 - **No-map behavior byte-identical:** with `frame=odin_odom` (or no frame arg) `7multi.sh` must pass nothing new to the launch; `system_real_robot.launch` defaults must reproduce today's behavior exactly (`vehicle_simulator.rviz`, no PCD publisher).
 - `7multi.sh` must NOT call `showmap.sh` (no chained launch — would double RViz, double `/overall_map` publisher, couple shell lifecycles).
 - Fixed names: topic `/overall_map`, frame `odin_map`, display name `OverallMap`, fixed frames `odin_odom` (no-map) / `odin_map` (map), PCD params `tf_frame` + `publishing_period_ms` (field-verified names — do not rename).
@@ -42,7 +42,7 @@
 ### Task 1: Create `cruise_map.rviz` — map-mode cruise RViz config
 
 **Files:**
-- Create: `cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz`
+- Create: `planner/src/vehicle_simulator/rviz/cruise_map.rviz`
 
 **Interfaces:**
 - Consumes: the display set and marker conventions of `vehicle_simulator.rviz` (unchanged).
@@ -53,7 +53,7 @@
 Run:
 ```bash
 cd /home/yu/Codes_rk
-cp cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz
+cp planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz planner/src/vehicle_simulator/rviz/cruise_map.rviz
 ```
 
 - [ ] **Step 2: Preset Fixed Frame to `odin_map` and reword the frame comment block**
@@ -117,7 +117,7 @@ Constraints on the display (keep as copied — do not change): Topic `/overall_m
 Run:
 ```bash
 cd /home/yu/Codes_rk
-diff cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz
+diff planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz planner/src/vehicle_simulator/rviz/cruise_map.rviz
 ```
 
 Expected: ONLY the tail frame-comment block (Step 2) and the two `OverallMap` lines `Enabled: false → true` and `Value: false → true` (Step 3). Any other difference is a defect — fix it.
@@ -128,7 +128,7 @@ Run:
 ```bash
 python3 -c "
 import yaml
-d = yaml.safe_load(open('/home/yu/Codes_rk/cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz'))
+d = yaml.safe_load(open('/home/yu/Codes_rk/planner/src/vehicle_simulator/rviz/cruise_map.rviz'))
 assert d['Visualization Manager']['Global Options']['Fixed Frame'] == 'odin_map'
 disp = d['Visualization Manager']['Displays']
 m = [x for x in disp if x.get('Name') == 'OverallMap'][0]
@@ -143,15 +143,15 @@ Expected: `OK: Fixed Frame = odin_map | OverallMap enabled: True`
 
 ```bash
 cd /home/yu/Codes_rk
-git add cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz
-git diff --cached --name-only     # must print exactly: cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz
+git add planner/src/vehicle_simulator/rviz/cruise_map.rviz
+git diff --cached --name-only     # must print exactly: planner/src/vehicle_simulator/rviz/cruise_map.rviz
 git commit -m "feat(rviz): add cruise_map.rviz for map-mode waypoint marking"
 ```
 
 ### Task 2: `system_real_robot.launch` — selectable RViz config + conditional PCD map publisher
 
 **Files:**
-- Modify: `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch`
+- Modify: `planner/src/vehicle_simulator/launch/system_real_robot.launch`
 
 **Interfaces:**
 - Consumes: `cruise_map.rviz` path (passed by Task 3's `7multi.sh`); map PCD path (passed by Task 3, absolute).
@@ -219,7 +219,7 @@ The hardcoded assignment sits immediately before the `start_rviz` Node (~L141). 
 
 (`rviz_config_file` now resolves the `LaunchConfiguration` from Step 1; the remappings and `TimerAction(period=8.0)` stay as-is. After this step, grep for the hardcoded assignment:
 ```bash
-grep -n 'rviz_config_file = os.path.join' cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
+grep -n 'rviz_config_file = os.path.join' planner/src/vehicle_simulator/launch/system_real_robot.launch
 ```
 must return NOTHING — the only `rviz_config_file = ...` left in the file is the `LaunchConfiguration` binding from Step 1.)
 
@@ -265,7 +265,7 @@ In the `ld.add_action(...)` section (near `ld.add_action(declare_planning_frame)
 
 Run:
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 source install/setup.bash
 ros2 launch vehicle_simulator system_real_robot.launch > /tmp/launch_default.log 2>&1 &
 sleep 12
@@ -280,12 +280,12 @@ Expected: no `pcd_map_publisher` node, RViz uses `vehicle_simulator.rviz`, no `/
 
 Run:
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 ROOT="$(cd .. && pwd)"
 ros2 launch vehicle_simulator system_real_robot.launch \
   enableCruise:=true multi_enabled:=true multi_source:=rviz multi_frame:=odin_map \
   rvizWaypointTopic:=/way_point_cruise \
-  rviz_config_file:="$ROOT/cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz" \
+  rviz_config_file:="$ROOT/planner/src/vehicle_simulator/rviz/cruise_map.rviz" \
   enable_pcd_map:=true \
   pcd_map_file:="$ROOT/SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd" \
   > /tmp/launch_map.log 2>&1 &
@@ -300,16 +300,16 @@ pkill -f "system_real_robot.launch"; pkill -f rviz2; pkill -f pcd_to_pointcloud
 
 ```bash
 cd /home/yu/Codes_rk
-git add cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
-git diff --cached --name-only     # must print exactly: cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
+git add planner/src/vehicle_simulator/launch/system_real_robot.launch
+git diff --cached --name-only     # must print exactly: planner/src/vehicle_simulator/launch/system_real_robot.launch
 git commit -m "feat(launch): selectable RViz config and conditional PCD map publisher"
 ```
 
 ### Task 3: `7multi.sh` frame-dependent behavior + extend `showmap.sh` (standalone viewer)
 
 **Files:**
-- Modify: `cmu_planner/7multi.sh`
-- Modify: `cmu_planner/showmap.sh` (already exists and is committed — the verified map publisher; extend it, do NOT rename anything, do NOT assume `7showmap.sh` exists)
+- Modify: `planner/7multi.sh`
+- Modify: `planner/showmap.sh` (already exists and is committed — the verified map publisher; extend it, do NOT rename anything, do NOT assume `7showmap.sh` exists)
 
 **Interfaces:**
 - Consumes: `rviz_config_file` / `enable_pcd_map` / `pcd_map_file` args (Task 2); `cruise_map.rviz` (Task 1); map PCD at `SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` (resolved absolute from repo root).
@@ -332,7 +332,7 @@ map_args=()
 if [[ "$frame" == "odin_map" ]]; then
   ROOT="$(cd "$(dirname "$0")/.." && pwd)"
   map_args+=(
-    rviz_config_file:="$ROOT/cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz"
+    rviz_config_file:="$ROOT/planner/src/vehicle_simulator/rviz/cruise_map.rviz"
     enable_pcd_map:=true
     pcd_map_file:="$ROOT/SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd"
   )
@@ -371,15 +371,15 @@ to:
 
 - [ ] **Step 5: Syntax check**
 
-Run: `bash -n /home/yu/Codes_rk/cmu_planner/7multi.sh && echo OK` — Expected: `OK`
+Run: `bash -n /home/yu/Codes_rk/planner/7multi.sh && echo OK` — Expected: `OK`
 
 #### Part B: extend `showmap.sh` to also open the map-mode RViz (standalone viewer)
 
-`cmu_planner/showmap.sh` already exists and is committed; its verified publish block must stay byte-identical (same `cd "$(dirname "$0")/../SLAM"` pattern, same `file_name` relative path, same params, same remap). The only additions: source the workspace setup, background the publisher with a cleanup trap, and launch RViz immediately.
+`planner/showmap.sh` already exists and is committed; its verified publish block must stay byte-identical (same `cd "$(dirname "$0")/../SLAM"` pattern, same `file_name` relative path, same params, same remap). The only additions: source the workspace setup, background the publisher with a cleanup trap, and launch RViz immediately.
 
 - [ ] **Step 6: Read the current file and confirm the verified block**
 
-Run: `cat /home/yu/Codes_rk/cmu_planner/showmap.sh`
+Run: `cat /home/yu/Codes_rk/planner/showmap.sh`
 
 Expected — the verified block (must stay unchanged):
 
@@ -404,7 +404,7 @@ ros2 run pcl_ros pcd_to_pointcloud --ros-args \
 
 - [ ] **Step 7: Rewrite `showmap.sh` with the minimal additions**
 
-Write the full content of `cmu_planner/showmap.sh` (the verified publish block stays as-is; the script resolves an absolute `SCRIPT_DIR` BEFORE any `cd`, because the later `cd "$SCRIPT_DIR/../SLAM"` would invalidate relative `$(dirname "$0")` lookups):
+Write the full content of `planner/showmap.sh` (the verified publish block stays as-is; the script resolves an absolute `SCRIPT_DIR` BEFORE any `cd`, because the later `cd "$SCRIPT_DIR/../SLAM"` would invalidate relative `$(dirname "$0")` lookups):
 
 ```bash
 #!/bin/bash
@@ -450,9 +450,9 @@ Constraints: (A) `source "$SCRIPT_DIR/install/setup.bash"` after the humble sour
 
 Run:
 ```bash
-bash -n /home/yu/Codes_rk/cmu_planner/showmap.sh && echo OK
+bash -n /home/yu/Codes_rk/planner/showmap.sh && echo OK
 cd /home/yu/Codes_rk
-bash cmu_planner/showmap.sh > /tmp/showmap.log 2>&1 &
+bash planner/showmap.sh > /tmp/showmap.log 2>&1 &
 sleep 4
 source /opt/ros/humble/setup.bash
 pgrep -af "rviz2 -d .*cruise_map" | head -2     # expect: rviz2 with cruise_map.rviz (starts immediately)
@@ -469,8 +469,8 @@ pgrep -af pcd_to_pointcloud | wc -l              # expect: 0 (trap cleaned up th
 
 ```bash
 cd /home/yu/Codes_rk
-git add cmu_planner/7multi.sh cmu_planner/showmap.sh
-git diff --cached --name-only     # must print exactly: cmu_planner/7multi.sh and cmu_planner/showmap.sh
+git add planner/7multi.sh planner/showmap.sh
+git diff --cached --name-only     # must print exactly: planner/7multi.sh and planner/showmap.sh
 git commit -m "feat(cmu): 7multi.sh map-mode RViz selection; showmap.sh auto-opens map RViz"
 ```
 
@@ -487,7 +487,7 @@ git commit -m "feat(cmu): 7multi.sh map-mode RViz selection; showmap.sh auto-ope
 
 Run:
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 bash 7multi.sh rviz -1 odin_map > /tmp/multi_map.log 2>&1 &
 sleep 20
 source /opt/ros/humble/setup.bash
@@ -524,7 +524,7 @@ Expected: the click carries `frame_id: odin_map` (waypoints stored as `multi_fra
 
 ```bash
 cd /home/yu/Codes_rk
-bash cmu_planner/showmap.sh > /tmp/showmap_accept.log 2>&1 &
+bash planner/showmap.sh > /tmp/showmap_accept.log 2>&1 &
 sleep 4
 source /opt/ros/humble/setup.bash
 pgrep -af "rviz2 -d .*cruise_map" | head -2    # expect: rviz2 with cruise_map.rviz opens automatically (no second terminal)
@@ -541,7 +541,7 @@ Expected: one command starts the `/overall_map` publisher AND opens `cruise_map.
 
 Formal map-mode cruise runs ONLY:
 ```bash
-cd cmu_planner
+cd planner
 bash 7multi.sh rviz -1 odin_map
 ```
 (no separate `showmap.sh`)

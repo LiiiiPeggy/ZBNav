@@ -2,33 +2,33 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move map-file / relocalization / `/overall_map` ownership into `SLAM/odin_ros_driver` (relocalization mode publishes it), and reduce `cmu_planner` to a pure consumer of `/overall_map` (keeps `cruise_map.rviz` + map-mode MULTI, publishes nothing, knows no PCD path). The standalone saved-map viewer `showmap.sh` moves from `cmu_planner/` to `SLAM/` and opens SLAM's own `overall_map.rviz`.
+**Goal:** Move map-file / relocalization / `/overall_map` ownership into `SLAM/odin_ros_driver` (relocalization mode publishes it), and reduce `planner` to a pure consumer of `/overall_map` (keeps `cruise_map.rviz` + map-mode MULTI, publishes nothing, knows no PCD path). The standalone saved-map viewer `showmap.sh` moves from `planner/` to `SLAM/` and opens SLAM's own `overall_map.rviz`.
 
-**Architecture:** Two new SLAM entry scripts + two split configs. `2run_slam.sh` launches Odin SLAM mapping (`custom_map_mode: 1`, Odin RViz on, no `/overall_map`). `3run_relocalization.sh` launches Odin relocalization (`custom_map_mode: 2`, Odin RViz on, `publish_overall_map:=true` → the Odin launch starts a `pcl_ros/pcd_to_pointcloud` node publishing `/overall_map` with `frame_id=odin_map`). `odin1_ros2.launch.py` gains `enable_rviz` / `publish_overall_map` / `overall_map_pcd` args. `cmu_planner` removes its `pcd_to_pointcloud` publisher (launch + 7multi.sh, and deletes its `showmap.sh`) while keeping the `rviz_config_file` selection and `cruise_map.rviz`. The standalone saved-map viewer moves to `SLAM/showmap.sh` (publishes `/overall_map` itself + opens SLAM's own `SLAM/src/odin_ros_driver/config/overall_map.rviz`); it never references `cmu_planner` — no `SLAM → cmu_planner` reverse dependency.
+**Architecture:** Two new SLAM entry scripts + two split configs. `2run_slam.sh` launches Odin SLAM mapping (`custom_map_mode: 1`, Odin RViz on, no `/overall_map`). `3run_relocalization.sh` launches Odin relocalization (`custom_map_mode: 2`, Odin RViz on, `publish_overall_map:=true` → the Odin launch starts a `pcl_ros/pcd_to_pointcloud` node publishing `/overall_map` with `frame_id=odin_map`). `odin1_ros2.launch.py` gains `enable_rviz` / `publish_overall_map` / `overall_map_pcd` args. `planner` removes its `pcd_to_pointcloud` publisher (launch + 7multi.sh, and deletes its `showmap.sh`) while keeping the `rviz_config_file` selection and `cruise_map.rviz`. The standalone saved-map viewer moves to `SLAM/showmap.sh` (publishes `/overall_map` itself + opens SLAM's own `SLAM/src/odin_ros_driver/config/overall_map.rviz`); it never references `planner` — no `SLAM → planner` reverse dependency.
 
 **Tech Stack:** ROS 2 Humble, launch Python, bash, `pcl_ros` (`pcd_to_pointcloud`, launch-runtime only), rviz2.
 
-**Spec:** In-chat design directive (19 sections) from the user. **Supersedes** `docs/superpowers/plans/2026-08-17-map-cloud-rviz.md` (which owned the now-abandoned cmu_planner-publisher approach). No separate spec file; rulings provisional against this plan text.
+**Spec:** In-chat design directive (19 sections) from the user. **Supersedes** `docs/superpowers/plans/2026-08-17-map-cloud-rviz.md` (which owned the now-abandoned planner-publisher approach). No separate spec file; rulings provisional against this plan text.
 
 ## Context (current real state — verified 2026-08-17)
 
 - Four commits landed from the previous plan and are KEPT in history (no revert/reset):
   - `c2754d4` cruise_map.rviz · `b30227e` launch selectable RViz + pcd publisher · `86e572b` 7multi.sh map-mode + showmap.sh auto-RViz · `d933ddd` showmap.sh cleanup fix.
-- Kept as-is: `cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz` (Fixed Frame `odin_map`, `OverallMap` enabled, topic `/overall_map`); `system_real_robot.launch` `rviz_config_file = LaunchConfiguration('rviz_config_file')` (default `vehicle_simulator.rviz`); `7multi.sh` `frame=odin_map → cruise_map.rviz` selection.
+- Kept as-is: `planner/src/vehicle_simulator/rviz/cruise_map.rviz` (Fixed Frame `odin_map`, `OverallMap` enabled, topic `/overall_map`); `system_real_robot.launch` `rviz_config_file = LaunchConfiguration('rviz_config_file')` (default `vehicle_simulator.rviz`); `7multi.sh` `frame=odin_map → cruise_map.rviz` selection.
 - `SLAM/src/odin_ros_driver/config/control_command.yaml` is the active verified config: `custom_map_mode: 2`, `relocalization_map_abs_path: "/root/work/lqp/SLAM/src/odin_ros_driver/map/map_20260807_151455.bin"`, plus verified sensor fields (`use_host_ros_time: 2`, `sendodom: 1`, `sendcloudslam: 1`, `dtof_fps: 100`, `custom_init_pos`, `custom_init_pose_search_radius: 4.0`, `custom_init_pose_max_rot_deg: 180.0`, …). Full `register_keys` block spans L1-197.
 - `SLAM/src/odin_ros_driver/launch_ROS2/odin1_ros2.launch.py` (current): args `config_file` (default share `config/control_command.yaml`), `rviz_config` (default share `config/odin_ros2.rviz`); nodes `host_sdk_sample`, `registered_scan_adapter_node`, `pcd2depth_ros2_node`, `cloud_reprojection_ros2_node`, `image_overlay_node`, `rviz_node` (UNCONDITIONAL, L98-104); no `launch.conditions` import. Note: `pcd2depth`/`reprojection`/`overlay` read `os.path.join(package_dir, 'config', 'control_command.yaml')` (the installed share copy) directly, NOT the `config_file` arg — out of scope to parameterize, harmless because the two new configs keep sensor fields identical.
 - `SLAM/src/odin_ros_driver/package.xml`: no `pcl_ros` anywhere. `CMakeLists.txt` already `install(DIRECTORY config/)` in both ROS1 (L246) and ROS2 (L460) sections — new config files in `config/` are installed automatically; no CMake change needed.
 - `SLAM/2run.sh` (unchanged, out of scope): `source install/setup.bash; ros2 launch odin_ros_driver odin1_ros2.launch.py` → after Task 4, behaves as relocalization-without-map-publish (`publish_overall_map` default false).
 - Map PCD at `SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` (PointXYZ, 405,532 points) — the host-side copy of the relocalization `.bin`. **`pcd_to_pointcloud` first message ~10 s after node start (10 s timer), then every 10 s.**
-- `cmu_planner/showmap.sh` (committed `f34756c`, then `86e572b`/`d933ddd`) MOVES to `SLAM/showmap.sh` with a new SLAM RViz config (`SLAM/src/odin_ros_driver/config/overall_map.rviz`). The d933ddd-verified cleanup approach (pkill the real `pcd_to_pointcloud` node, not just the `ros2 run` launcher) is carried over.
+- `planner/showmap.sh` (committed `f34756c`, then `86e572b`/`d933ddd`) MOVES to `SLAM/showmap.sh` with a new SLAM RViz config (`SLAM/src/odin_ros_driver/config/overall_map.rviz`). The d933ddd-verified cleanup approach (pkill the real `pcd_to_pointcloud` node, not just the `ros2 run` launcher) is carried over.
 
 ## Global Constraints
 
 ### Architecture / ownership
-- **`/overall_map` ownership = SLAM/odin_ros_driver, relocalization mode only.** cmu_planner CONSUMES only; it must not read the PCD, must not start `pcd_to_pointcloud`, and **`SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` must not appear anywhere in `cmu_planner/`** (final check).
-- **No `SLAM → cmu_planner` reverse dependency.** `SLAM/showmap.sh` must NOT open `cmu_planner`'s `cruise_map.rviz`; it opens SLAM's own `SLAM/src/odin_ros_driver/config/overall_map.rviz`. `cruise_map.rviz` belongs to the formal MULTI flow only (`bash cmu_planner/7multi.sh rviz -1 odin_map`).
+- **`/overall_map` ownership = SLAM/odin_ros_driver, relocalization mode only.** planner CONSUMES only; it must not read the PCD, must not start `pcd_to_pointcloud`, and **`SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` must not appear anywhere in `planner/`** (final check).
+- **No `SLAM → planner` reverse dependency.** `SLAM/showmap.sh` must NOT open `planner`'s `cruise_map.rviz`; it opens SLAM's own `SLAM/src/odin_ros_driver/config/overall_map.rviz`. `cruise_map.rviz` belongs to the formal MULTI flow only (`bash planner/7multi.sh rviz -1 odin_map`).
 - **Standalone viewer vs relocalization are exclusive.** `SLAM/showmap.sh` (offline saved-map view; starts its own `pcd_to_pointcloud`) and `SLAM/3run_relocalization.sh` (formal relocalization; the Odin launch publishes `/overall_map`) must NOT run simultaneously — both would publish `/overall_map` (two publishers). Usage text states this.
-- **`cmu_planner/` must contain NO `showmap.sh`** and no map-asset term (`map_20260807_151455.pcd`, `pcd_to_pointcloud`, `enable_pcd_map`, `pcd_map_file`, `SLAM/src/odin_ros_driver/map`, `cloud_pcd`).
+- **`planner/` must contain NO `showmap.sh`** and no map-asset term (`map_20260807_151455.pcd`, `pcd_to_pointcloud`, `enable_pcd_map`, `pcd_map_file`, `SLAM/src/odin_ros_driver/map`, `cloud_pcd`).
 - `custom_map_mode` values: SLAM config `1`, relocalization config `2`. Both configs are copies of the current active `control_command.yaml`; besides the mode field, keep all verified sensor params consistent. Do NOT change the map (`relocalization_map_abs_path` stays `/root/work/lqp/SLAM/.../map_20260807_151455.bin`).
 - `/overall_map`: `frame_id=odin_map`, `publishing_period_ms=10000`, `width=405532` is the CURRENT map's check value (not a fixed interface contract).
 - **Formal map-mode flow allows TWO RViz:** (1) Odin's own RViz (from `3run_relocalization.sh`, monitors relocalization/cloud/pose) and (2) `cruise_map.rviz` (from `7multi.sh`, waypoint marking/cruise). The old "one RViz only" constraint is dropped.
@@ -36,15 +36,15 @@
 
 ### Git / workspace
 - The four commits above are kept; NO `git reset`, `git revert`, `git checkout --`, `git restore` of whole dirs.
-- Do NOT touch / delete / rename / stage user's own uncommitted items: `D SLAM/3map.sh`, `?? SLAM/3trans2pcd.sh`, `?? SLAM/4downsample.sh`, `?? "SLAM/src/odin_ros_driver/config/control_command backup.yaml"` (a fully commented-out reference copy), `?? .claude/`, `?? cmu_planner/src/vehicle_simulator/launch/__pycache__/`, `?? docs/superpowers/plans/...`.
+- Do NOT touch / delete / rename / stage user's own uncommitted items: `D SLAM/3map.sh`, `?? SLAM/3trans2pcd.sh`, `?? SLAM/4downsample.sh`, `?? "SLAM/src/odin_ros_driver/config/control_command backup.yaml"` (a fully commented-out reference copy), `?? .claude/`, `?? planner/src/vehicle_simulator/launch/__pycache__/`, `?? docs/superpowers/plans/...`.
 - Never `git add -A` / `git add .` / `git clean`. Stage only the files each task names. Verify staged set with `git diff --cached --name-only` (NOT `git status --porcelain` — the tree always has unrelated untracked files). No push. No `Co-Authored-By` trailer.
-- Commit grouping (fixed): ① `feat(odin): add explicit slam and relocalization run modes` (configs + 2 scripts) ② `feat(odin): publish relocalization map on /overall_map` (launch + package.xml) ③ `refactor(cmu): remove overall map publishing from planner` (system_real_robot.launch + 7multi.sh + delete `cmu_planner/showmap.sh`) ④ `feat(odin): add standalone saved-map viewer` (`SLAM/showmap.sh` + `SLAM/src/odin_ros_driver/config/overall_map.rviz`). If git pairs the showmap.sh delete+add as a rename, ③/④ may be merged per the actual diff — but never mix unrelated files and never mix the user's own uncommitted files.
+- Commit grouping (fixed): ① `feat(odin): add explicit slam and relocalization run modes` (configs + 2 scripts) ② `feat(odin): publish relocalization map on /overall_map` (launch + package.xml) ③ `refactor(cmu): remove overall map publishing from planner` (system_real_robot.launch + 7multi.sh + delete `planner/showmap.sh`) ④ `feat(odin): add standalone saved-map viewer` (`SLAM/showmap.sh` + `SLAM/src/odin_ros_driver/config/overall_map.rviz`). If git pairs the showmap.sh delete+add as a rename, ③/④ may be merged per the actual diff — but never mix unrelated files and never mix the user's own uncommitted files.
 
 ### Marker rules
-- `# ################################` + `# Python: <desc>` / `# Bash: <desc>` / `# YAML: <desc>` BEFORE each new/modified logical block. No END markers. Never remove unrelated existing markers. If a block's purpose changes substantially, update its marker description (rule 12). `cmu_planner/showmap.sh` is deleted as a whole file (its old markers go with it); the new `SLAM/showmap.sh` is a fresh file carrying its own marker.
+- `# ################################` + `# Python: <desc>` / `# Bash: <desc>` / `# YAML: <desc>` BEFORE each new/modified logical block. No END markers. Never remove unrelated existing markers. If a block's purpose changes substantially, update its marker description (rule 12). `planner/showmap.sh` is deleted as a whole file (its old markers go with it); the new `SLAM/showmap.sh` is a fresh file carrying its own marker.
 
 ### Scope — do NOT add
-- PCD downsampling, transient_local publishers, new C++ map publisher, map server, Target Frame changes, new TF, frame guards, auto-detection of relocalization success, auto-closing Odin RViz, auto-calling `7multi.sh`/`showmap.sh`, shell-chaining SLAM↔cmu_planner. Only: explicit SLAM/relocalization launch modes, `/overall_map` from relocalization, Odin RViz stays on, cmu_planner consumes.
+- PCD downsampling, transient_local publishers, new C++ map publisher, map server, Target Frame changes, new TF, frame guards, auto-detection of relocalization success, auto-closing Odin RViz, auto-calling `7multi.sh`/`showmap.sh`, shell-chaining SLAM↔planner. Only: explicit SLAM/relocalization launch modes, `/overall_map` from relocalization, Odin RViz stays on, planner consumes.
 
 ---
 
@@ -391,7 +391,7 @@ Expected: both config files visible in the install share; `--show-args` shows th
 ### Task 7: `system_real_robot.launch` — remove the PCD map publisher, keep RViz selection
 
 **Files:**
-- Modify: `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch`
+- Modify: `planner/src/vehicle_simulator/launch/system_real_robot.launch`
 
 **Interfaces:**
 - Consumes: the `rviz_config_file` mechanism from commit `b30227e` (KEEP).
@@ -422,8 +422,8 @@ Delete `ld.add_action(declare_enable_pcd_map)`, `ld.add_action(declare_pcd_map_f
 
 ```bash
 cd /home/yu/Codes_rk
-grep -n "pcd\|overall_map\|enable_pcd\|pcd_map\|pcl_ros\|cloud_pcd" cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch || echo "NO-MAP-REFS"
-grep -n "rviz_config_file\|declare_rviz_config_file\|arguments=\['-d', rviz_config_file\]\|TimerAction" cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
+grep -n "pcd\|overall_map\|enable_pcd\|pcd_map\|pcl_ros\|cloud_pcd" planner/src/vehicle_simulator/launch/system_real_robot.launch || echo "NO-MAP-REFS"
+grep -n "rviz_config_file\|declare_rviz_config_file\|arguments=\['-d', rviz_config_file\]\|TimerAction" planner/src/vehicle_simulator/launch/system_real_robot.launch
 ```
 
 Expected: first grep prints `NO-MAP-REFS` (no `pcd`/`overall_map`/`pcl_ros` anywhere); second grep still shows the `rviz_config_file` binding, `declare_rviz_config_file`, `arguments=['-d', rviz_config_file]`, and the `TimerAction(period=8.0)`.
@@ -431,7 +431,7 @@ Expected: first grep prints `NO-MAP-REFS` (no `pcd`/`overall_map`/`pcl_ros` anyw
 - [ ] **Step 6: Python compile check**
 
 ```bash
-python3 -m py_compile cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch && echo COMPILE-OK
+python3 -m py_compile planner/src/vehicle_simulator/launch/system_real_robot.launch && echo COMPILE-OK
 ```
 
 - [ ] **Step 7: No commit yet** — part of group commit ③ at Task 9.
@@ -439,7 +439,7 @@ python3 -m py_compile cmu_planner/src/vehicle_simulator/launch/system_real_robot
 ### Task 8: `7multi.sh` — drop map-publish args, keep `cruise_map.rviz` selection
 
 **Files:**
-- Modify: `cmu_planner/7multi.sh`
+- Modify: `planner/7multi.sh`
 
 **Interfaces:**
 - Consumes: `rviz_config_file` launch arg (Task 2 of previous plan, kept) and `cruise_map.rviz`.
@@ -457,7 +457,7 @@ map_args=()
 if [[ "$frame" == "odin_map" ]]; then
   ROOT="$(cd "$(dirname "$0")/.." && pwd)"
   map_args+=(
-    rviz_config_file:="$ROOT/cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz"
+    rviz_config_file:="$ROOT/planner/src/vehicle_simulator/rviz/cruise_map.rviz"
   )
 fi
 ```
@@ -479,9 +479,9 @@ Replace the two map-mode usage lines (currently ~L26-28) with:
 
 ```bash
 cd /home/yu/Codes_rk
-grep -n "enable_pcd_map\|pcd_map_file\|pcd_to_pointcloud\|map_20260807_151455.pcd\|SLAM/src/odin_ros_driver/map" cmu_planner/7multi.sh || echo "NO-MAP-REFS"
-bash -n cmu_planner/7multi.sh && echo SYNTAX-OK
-grep -n "cruise_map.rviz\|rviz_config_file\|showmap" cmu_planner/7multi.sh
+grep -n "enable_pcd_map\|pcd_map_file\|pcd_to_pointcloud\|map_20260807_151455.pcd\|SLAM/src/odin_ros_driver/map" planner/7multi.sh || echo "NO-MAP-REFS"
+bash -n planner/7multi.sh && echo SYNTAX-OK
+grep -n "cruise_map.rviz\|rviz_config_file\|showmap" planner/7multi.sh
 ```
 
 Expected: `NO-MAP-REFS`, `SYNTAX-OK`; the grep shows `cruise_map.rviz` selection + `rviz_config_file` arg + NO `showmap` call.
@@ -491,17 +491,17 @@ Expected: `NO-MAP-REFS`, `SYNTAX-OK`; the grep shows `cruise_map.rviz` selection
 ### Task 9: Move the standalone saved-map viewer into SLAM
 
 **Files:**
-- Delete: `cmu_planner/showmap.sh` (committed — normal git delete in a new incremental commit; NO reset/revert)
+- Delete: `planner/showmap.sh` (committed — normal git delete in a new incremental commit; NO reset/revert)
 - Create: `SLAM/showmap.sh`
 - Create: `SLAM/src/odin_ros_driver/config/overall_map.rviz`
 
 **Interfaces:**
 - Consumes: the map PCD at `SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd`; the d933ddd-verified process-cleanup approach.
-- Produces: an offline saved-map viewer fully owned by SLAM — it starts its own `pcl_ros/pcd_to_pointcloud` publishing `/overall_map` (frame `odin_map`, period 10000 ms) and opens SLAM's own `overall_map.rviz`. NEVER references `cmu_planner` (no reverse dependency). Independent path — do NOT run together with `3run_relocalization.sh` (both publish `/overall_map`).
+- Produces: an offline saved-map viewer fully owned by SLAM — it starts its own `pcl_ros/pcd_to_pointcloud` publishing `/overall_map` (frame `odin_map`, period 10000 ms) and opens SLAM's own `overall_map.rviz`. NEVER references `planner` (no reverse dependency). Independent path — do NOT run together with `3run_relocalization.sh` (both publish `/overall_map`).
 
 - [ ] **Step 1: Create `SLAM/src/odin_ros_driver/config/overall_map.rviz`**
 
-Minimal saved-map viewer config. Do NOT reuse `odin_ros2.rviz` (that is the Odin runtime-status monitor: image/cloud_slam/odometry — not an offline map viewer). Do NOT touch `cmu_planner/cruise_map.rviz`. Global Options `Fixed Frame: odin_map`; displays: Grid (optional) + one PointCloud2 `OverallMap`:
+Minimal saved-map viewer config. Do NOT reuse `odin_ros2.rviz` (that is the Odin runtime-status monitor: image/cloud_slam/odometry — not an offline map viewer). Do NOT touch `planner/cruise_map.rviz`. Global Options `Fixed Frame: odin_map`; displays: Grid (optional) + one PointCloud2 `OverallMap`:
 
 ```yaml
 # ################################
@@ -540,7 +540,7 @@ Visualization Manager:
       Class: rviz_default_plugins/Orbit
 ```
 
-The current PCD has only x/y/z — do NOT depend on RGB8 or Intensity for map coloring. Do NOT add `MultiWaypointTool`, `/path_viz`, `/terrain_map`, planner displays, or cmu_planner plugins. The existing `install(DIRECTORY config/)` rule installs this file — no CMakeLists change.
+The current PCD has only x/y/z — do NOT depend on RGB8 or Intensity for map coloring. Do NOT add `MultiWaypointTool`, `/path_viz`, `/terrain_map`, planner displays, or planner plugins. The existing `install(DIRECTORY config/)` rule installs this file — no CMakeLists change.
 
 - [ ] **Step 2: Create `SLAM/showmap.sh`**
 
@@ -580,11 +580,11 @@ ros2 run rviz2 rviz2 -d \
   "$SCRIPT_DIR/src/odin_ros_driver/config/overall_map.rviz"
 ```
 
-- [ ] **Step 3: Delete `cmu_planner/showmap.sh`**
+- [ ] **Step 3: Delete `planner/showmap.sh`**
 
 ```bash
 cd /home/yu/Codes_rk
-git rm cmu_planner/showmap.sh
+git rm planner/showmap.sh
 ```
 
 (removes the working file and stages the deletion — the clean way to delete a committed file.)
@@ -593,19 +593,19 @@ git rm cmu_planner/showmap.sh
 
 ```bash
 cd /home/yu/Codes_rk
-echo "--- cmu_planner: no showmap.sh, no map-asset terms ---"
-ls cmu_planner/showmap.sh 2>&1 || echo "SHOWMAP-GONE"
-grep -rn "map_20260807_151455.pcd\|pcd_to_pointcloud\|enable_pcd_map\|pcd_map_file\|SLAM/src/odin_ros_driver/map" cmu_planner/ || echo "CLEAN"
-echo "--- SLAM/showmap.sh must not reference cmu_planner ---"
-grep -n "cmu_planner\|cruise_map" SLAM/showmap.sh || echo "NO-CMU-REFS"
+echo "--- planner: no showmap.sh, no map-asset terms ---"
+ls planner/showmap.sh 2>&1 || echo "SHOWMAP-GONE"
+grep -rn "map_20260807_151455.pcd\|pcd_to_pointcloud\|enable_pcd_map\|pcd_map_file\|SLAM/src/odin_ros_driver/map" planner/ || echo "CLEAN"
+echo "--- SLAM/showmap.sh must not reference planner ---"
+grep -n "planner\|cruise_map" SLAM/showmap.sh || echo "NO-CMU-REFS"
 bash -n SLAM/showmap.sh && echo SYNTAX-OK
 echo "--- publish block + rviz path ---"
 grep -n "pcd_to_pointcloud\|map_20260807_151455.pcd\|tf_frame:=odin_map\|overall_map.rviz" SLAM/showmap.sh
 ```
 
-Expected: `SHOWMAP-GONE`, cmu_planner `CLEAN`, `NO-CMU-REFS`, `SYNTAX-OK`; last grep shows the publish block + `overall_map.rviz` path (no `cruise_map`, no `cmu_planner`).
+Expected: `SHOWMAP-GONE`, planner `CLEAN`, `NO-CMU-REFS`, `SYNTAX-OK`; last grep shows the publish block + `overall_map.rviz` path (no `cruise_map`, no `planner`).
 
-- [ ] **Step 5: Runtime smoke test (local, no device, no cmu_planner)**
+- [ ] **Step 5: Runtime smoke test (local, no device, no planner)**
 
 ```bash
 cd /home/yu/Codes_rk/SLAM
@@ -627,7 +627,7 @@ pgrep -af pcd_to_pointcloud | wc -l                  # expect: 0 (cleanup ran)
 
 ```bash
 cd /home/yu/Codes_rk
-git add cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch cmu_planner/7multi.sh
+git add planner/src/vehicle_simulator/launch/system_real_robot.launch planner/7multi.sh
 git diff --cached --name-only   # must print exactly: launch file, 7multi.sh, and showmap.sh (deleted)
 git commit -m "refactor(cmu): remove overall map publishing from planner"
 git add SLAM/showmap.sh SLAM/src/odin_ros_driver/config/overall_map.rviz
@@ -635,7 +635,7 @@ git diff --cached --name-only   # must print exactly those 2 paths
 git commit -m "feat(odin): add standalone saved-map viewer"
 ```
 
-Note: `git rm cmu_planner/showmap.sh` (Step 3) already staged the deletion, so commit ③ carries `showmap.sh` as deleted alongside the two modified cmu_planner files. If git pairs that deletion with the new `SLAM/showmap.sh` as a rename (similar content), ③/④ may be merged per the actual diff — follow the diff, never mixing unrelated files.
+Note: `git rm planner/showmap.sh` (Step 3) already staged the deletion, so commit ③ carries `showmap.sh` as deleted alongside the two modified planner files. If git pairs that deletion with the new `SLAM/showmap.sh` as a rename (similar content), ③/④ may be merged per the actual diff — follow the diff, never mixing unrelated files.
 
 ### Task 10: End-to-end acceptance
 
@@ -644,19 +644,19 @@ Note: `git rm cmu_planner/showmap.sh` (Step 3) already staged the deletion, so c
 **Focus checks (must all be YES):**
 1. `bash SLAM/2run_slam.sh` → SLAM mode, Odin RViz on, NO `/overall_map`.
 2. `bash SLAM/3run_relocalization.sh` → relocalization mode, Odin RViz on, `/overall_map` published by SLAM with `frame_id=odin_map`.
-3. `bash cmu_planner/7multi.sh rviz -1 odin_map` → does NOT read PCD, does NOT start `pcd_to_pointcloud`, opens `cruise_map.rviz`, consumes the SLAM-published `/overall_map`.
+3. `bash planner/7multi.sh rviz -1 odin_map` → does NOT read PCD, does NOT start `pcd_to_pointcloud`, opens `cruise_map.rviz`, consumes the SLAM-published `/overall_map`.
 4. Formal relocalization + MULTI allows TWO RViz (Odin RViz for localization monitoring + cruise_map.rviz for waypoint cruise) — YES.
-5. cmu_planner is completely ignorant of `SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` AND contains no `showmap.sh` — YES.
+5. planner is completely ignorant of `SLAM/src/odin_ros_driver/map/map_20260807_151455.pcd` AND contains no `showmap.sh` — YES.
 
 - [ ] **Step 1: Static whole-tree checks (local)**
 
 ```bash
 cd /home/yu/Codes_rk
-echo "--- cmu_planner must not know the PCD and must have no showmap.sh ---"
-ls cmu_planner/showmap.sh 2>&1 || echo "SHOWMAP-GONE"
-grep -rn "map_20260807_151455.pcd\|pcd_to_pointcloud\|enable_pcd_map\|pcd_map_file\|cloud_pcd" cmu_planner/ || echo "CLEAN"
-echo "--- the 2 changed cmu_planner files carry no pcl_ros / no PCD-asset refs ---"
-grep -l "pcl_ros\|map_20260807_151455\|pcd_to_pointcloud\|enable_pcd_map\|pcd_map_file" cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch cmu_planner/7multi.sh 2>/dev/null || echo "CLEAN-2"
+echo "--- planner must not know the PCD and must have no showmap.sh ---"
+ls planner/showmap.sh 2>&1 || echo "SHOWMAP-GONE"
+grep -rn "map_20260807_151455.pcd\|pcd_to_pointcloud\|enable_pcd_map\|pcd_map_file\|cloud_pcd" planner/ || echo "CLEAN"
+echo "--- the 2 changed planner files carry no pcl_ros / no PCD-asset refs ---"
+grep -l "pcl_ros\|map_20260807_151455\|pcd_to_pointcloud\|enable_pcd_map\|pcd_map_file" planner/src/vehicle_simulator/launch/system_real_robot.launch planner/7multi.sh 2>/dev/null || echo "CLEAN-2"
 echo "--- SLAM-side map references (allowed hits: 3run_relocalization.sh, showmap.sh, configs/tools) ---"
 grep -rln "map_20260807_151455.pcd" SLAM/
 echo "--- SLAM configs parse ---"
@@ -670,7 +670,7 @@ echo "--- odin launch shows args ---"
 cd /home/yu/Codes_rk/SLAM && source /opt/ros/humble/setup.bash && ros2 launch odin_ros_driver odin1_ros2.launch.py --show-args 2>&1 | grep -A1 "enable_rviz\|publish_overall_map\|overall_map_pcd" | head -12
 ```
 
-Expected: `SHOWMAP-GONE` + cmu_planner grep prints `CLEAN`; `CLEAN-2` (NOTE: `7multi.sh`'s usage text legitimately mentions `/overall_map` and `SLAM/3run_relocalization.sh` — the CLEAN-2 grep deliberately excludes the bare word `overall_map`; a help-text mention is intended, not a violation); the SLAM grep lists ONLY SLAM-side files (`3run_relocalization.sh`, `showmap.sh`, `control_command*.yaml` and any SLAM tool) — never a cmu_planner path; the three configs parse with modes `2/1/2`; `--show-args` lists the three new args.
+Expected: `SHOWMAP-GONE` + planner grep prints `CLEAN`; `CLEAN-2` (NOTE: `7multi.sh`'s usage text legitimately mentions `/overall_map` and `SLAM/3run_relocalization.sh` — the CLEAN-2 grep deliberately excludes the bare word `overall_map`; a help-text mention is intended, not a violation); the SLAM grep lists ONLY SLAM-side files (`3run_relocalization.sh`, `showmap.sh`, `control_command*.yaml` and any SLAM tool) — never a planner path; the three configs parse with modes `2/1/2`; `--show-args` lists the three new args.
 
 - [ ] **Step 2: Local headless launch test — `/overall_map` from the Odin launch (no device needed)**
 
@@ -700,7 +700,7 @@ ros2 node list | grep -c overall_map_publisher               # expect: 0
 pkill -f "odin1_ros2.launch.py"; pkill -f "host_sdk_sample"
 ```
 
-- [ ] **Step 4: Standalone saved-map viewer acceptance (local, no device, no cmu_planner)**
+- [ ] **Step 4: Standalone saved-map viewer acceptance (local, no device, no planner)**
 
 ```bash
 cd /home/yu/Codes_rk/SLAM
@@ -713,12 +713,12 @@ ros2 topic echo /overall_map --once --field header.frame_id   # expect: odin_map
 ros2 topic echo /overall_map --once --field width             # expect: 405532 (current check value)
 pgrep -af pcd_to_pointcloud | wc -l                  # expect: 1 (single publisher, this viewer's)
 pgrep -f host_sdk_sample | wc -l                     # expect: 0 (no Odin device)
-pgrep -f "localPlanner\|cruiseController" | wc -l    # expect: 0 (no cmu_planner)
+pgrep -f "localPlanner\|cruiseController" | wc -l    # expect: 0 (no planner)
 pkill -f rviz2
 sleep 2
 pgrep -af pcd_to_pointcloud | wc -l                  # expect: 0 (cleanup after RViz close)
 ```
-Expected: one RViz (`overall_map.rviz`, Fixed Frame `odin_map`, OverallMap enabled) + `/overall_map` from SLAM's own `pcd_to_pointcloud` only; no `host_sdk_sample`, no cmu_planner, no dependency on `cruise_map.rviz`; publisher cleaned up when RViz closes.
+Expected: one RViz (`overall_map.rviz`, Fixed Frame `odin_map`, OverallMap enabled) + `/overall_map` from SLAM's own `pcd_to_pointcloud` only; no `host_sdk_sample`, no planner, no dependency on `cruise_map.rviz`; publisher cleaned up when RViz closes.
 
 - [ ] **Step 5: On-robot acceptance (PENDING-ROBOT; report as such)**
 
@@ -728,12 +728,12 @@ Expected: one RViz (`overall_map.rviz`, Fixed Frame `odin_map`, OverallMap enabl
 **B. Relocalization mode** — `cd SLAM && bash 3run_relocalization.sh`:
 - `custom_map_mode=2`, loads `map_20260807_151455.bin`, Odin RViz auto-opens, `ros2 run tf2_ros tf2_echo odin_map odin_odom` works; `ros2 node list | grep overall_map_publisher` → present; `ros2 topic info /overall_map -v` → exactly 1 publisher; `ros2 topic echo /overall_map --once --field header.frame_id` → `odin_map`; width → `405532` (current check value, not a permanent contract).
 
-**C. Map-mode MULTI** — keep `3run_relocalization.sh` running, new terminal `cd cmu_planner && bash 7multi.sh rviz -1 odin_map`:
+**C. Map-mode MULTI** — keep `3run_relocalization.sh` running, new terminal `cd planner && bash 7multi.sh rviz -1 odin_map`:
 - TWO RViz allowed: (1) Odin RViz monitoring relocalization, (2) `cruise_map.rviz` with Fixed Frame `odin_map`, OverallMap enabled, shows `/overall_map`, MultiWaypointTool present.
 - Click → `ros2 topic echo /multi_waypoint_add --once --field header.frame_id` → `odin_map`. `/multi_start` → robot follows the map-frame MULTI route.
 - Frame checks (unchanged): `/path_viz` → `odin_odom`, `/terrain_map` → `odin_odom`, `/way_point` → `odin_odom`.
 
-**D. No-map regression** — no `3run_relocalization.sh`; `cd cmu_planner && bash 7multi.sh rviz` (or `rviz -1 odin_odom`): `vehicle_simulator.rviz`, Fixed Frame `odin_odom`, no `/overall_map` / `odin_map` / PCD dependency; no-map MULTI unchanged.
+**D. No-map regression** — no `3run_relocalization.sh`; `cd planner && bash 7multi.sh rviz` (or `rviz -1 odin_odom`): `vehicle_simulator.rviz`, Fixed Frame `odin_odom`, no `/overall_map` / `odin_map` / PCD dependency; no-map MULTI unchanged.
 
 **E. Standalone viewer is a separate path** — `cd SLAM && bash showmap.sh` (covered by Step 4) is for offline saved-map viewing and MUST NOT run together with `3run_relocalization.sh` (both would publish `/overall_map` → two publishers).
 

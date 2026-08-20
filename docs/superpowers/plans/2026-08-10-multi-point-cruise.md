@@ -43,23 +43,23 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | MULTI state machine, queue, `multi_frame` coordinate handling, TF (map mode), YAML, markers, service |
-| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Pass `multi_*` + `default_wait_time` + `multi_frame` params |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_*` + `default_wait_time` + `multi_frame` args |
-| `cmu_planner/src/local_planner/CMakeLists.txt` | Modify | New deps + config install |
-| `cmu_planner/src/local_planner/package.xml` | Modify | New deps |
-| `cmu_planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route (coordinates in `multi_frame_`) |
-| `cmu_planner/7multi.sh` | Modify | Executable launcher with optional 3rd param `frame` |
-| `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | Fixed Frame → `odom` (MarkerArray display + PublishPoint tool already present) |
+| `planner/src/local_planner/src/cruiseController.cpp` | Modify | MULTI state machine, queue, `multi_frame` coordinate handling, TF (map mode), YAML, markers, service |
+| `planner/src/local_planner/launch/cruise.launch` | Modify | Pass `multi_*` + `default_wait_time` + `multi_frame` params |
+| `planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_*` + `default_wait_time` + `multi_frame` args |
+| `planner/src/local_planner/CMakeLists.txt` | Modify | New deps + config install |
+| `planner/src/local_planner/package.xml` | Modify | New deps |
+| `planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route (coordinates in `multi_frame_`) |
+| `planner/7multi.sh` | Modify | Executable launcher with optional 3rd param `frame` |
+| `planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | Fixed Frame → `odom` (MarkerArray display + PublishPoint tool already present) |
 
 ---
 
 ### Task 1: Dependencies (CMake + package.xml + config dir)
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/CMakeLists.txt`
-- Modify: `cmu_planner/src/local_planner/package.xml`
-- Create: `cmu_planner/src/local_planner/config/multi_route.yaml`
+- Modify: `planner/src/local_planner/CMakeLists.txt`
+- Modify: `planner/src/local_planner/package.xml`
+- Create: `planner/src/local_planner/config/multi_route.yaml`
 
 **Interfaces:**
 - Consumes: nothing
@@ -118,7 +118,7 @@ Add after the existing `<depend>` entries:
 
 - [ ] **Step 5: Default YAML route**
 
-Create `cmu_planner/src/local_planner/config/multi_route.yaml`:
+Create `planner/src/local_planner/config/multi_route.yaml`:
 
 ```yaml
 multi_cruise:
@@ -137,7 +137,7 @@ The coordinates have NO frame field — they are interpreted in `multi_frame_` (
 - [ ] **Step 6: Build**
 
 ```bash
-cd cmu_planner
+cd planner
 colcon build --symlink-install --packages-select local_planner
 ```
 
@@ -147,9 +147,9 @@ Expected: builds clean (new deps resolve).
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/CMakeLists.txt \
-        cmu_planner/src/local_planner/package.xml \
-        cmu_planner/src/local_planner/config/multi_route.yaml
+git add planner/src/local_planner/CMakeLists.txt \
+        planner/src/local_planner/package.xml \
+        planner/src/local_planner/config/multi_route.yaml
 git commit -m "feat(multi): add yaml-cpp/visualization_msgs/std_srvs/tf2 deps, config install, default route"
 ```
 
@@ -158,7 +158,7 @@ git commit -m "feat(multi): add yaml-cpp/visualization_msgs/std_srvs/tf2 deps, c
 ### Task 2: Waypoint struct + new params (incl. multi_frame) + MULTI state enum
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: nothing
@@ -313,7 +313,7 @@ In the existing `stateName(CruiseState s)` switch, add the five new cases:
 - [ ] **Step 7: Build**
 
 ```bash
-cd cmu_planner && colcon build --symlink-install --packages-select local_planner
+cd planner && colcon build --symlink-install --packages-select local_planner
 ```
 
 Expected: builds clean.
@@ -322,7 +322,7 @@ Expected: builds clean.
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(multi): add multi_frame param (odom|map, default odom)"
 ```
 
@@ -331,7 +331,7 @@ git commit -m "feat(multi): add multi_frame param (odom|map, default odom)"
 ### Task 3: tf2 buffer + MULTI setup + frame-aware waypoint entry
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `multi_enabled_`, `multi_source_`, `multi_frame_`, `multi_route_file_`, `default_wait_time_`,
@@ -723,7 +723,7 @@ In constructor, add (only when `multi_enabled_`):
 - [ ] **Step 9: Build**
 
 ```bash
-cd cmu_planner && colcon build --symlink-install --packages-select local_planner
+cd planner && colcon build --symlink-install --packages-select local_planner
 ```
 
 Expected: builds clean.
@@ -732,7 +732,7 @@ Expected: builds clean.
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(multi): frame-aware waypoint entry, markers in multi_frame, frame-checked RViz clicks"
 ```
 
@@ -741,7 +741,7 @@ git commit -m "feat(multi): frame-aware waypoint entry, markers in multi_frame, 
 ### Task 4: WAIT_LOCALIZATION gating + multi dispatch in controlLoop
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `multi_enabled_`, `has_odom_`, `multi_frame_`, `tf_buffer_`, `state_`
@@ -800,7 +800,7 @@ Step 1, which dispatches that initial state at runtime.)
 - [ ] **Step 2: Build**
 
 ```bash
-cd cmu_planner && colcon build --symlink-install --packages-select local_planner
+cd planner && colcon build --symlink-install --packages-select local_planner
 ```
 
 Expected: builds clean.
@@ -809,7 +809,7 @@ Expected: builds clean.
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(multi): WAIT_LOCALIZATION gate requires relocalization TF only in map mode"
 ```
 
@@ -818,7 +818,7 @@ git commit -m "feat(multi): WAIT_LOCALIZATION gate requires relocalization TF on
 ### Task 5: GO_TO_WAYPOINT arrival + /stop=2 seize + TURN_AT_WAYPOINT + WAIT_AT_WAYPOINT
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `gx_odom_/gy_odom_`, `active_goal_valid_`, `waypoint_index_`, `closing_loop_`,
@@ -842,7 +842,7 @@ No edits needed.
 - [ ] **Step 2: Build**
 
 ```bash
-cd cmu_planner && colcon build --symlink-install --packages-select local_planner
+cd planner && colcon build --symlink-install --packages-select local_planner
 ```
 
 Expected: builds clean.
@@ -857,7 +857,7 @@ existing code still compiles.
 ### Task 6: advanceWaypoint + loop_count semantics
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `waypoint_index_`, `waypoints_`, `closing_loop_`
@@ -891,7 +891,7 @@ existing code still compiles.
 - [ ] **Step 2: Build**
 
 ```bash
-cd cmu_planner && colcon build --symlink-install --packages-select local_planner
+cd planner && colcon build --symlink-install --packages-select local_planner
 ```
 
 Expected: builds clean.
@@ -905,7 +905,7 @@ Skip the commit.
 ### Task 7: /stop handling in MULTI mode (reuse turning flags)
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: existing `stopCallback()`, `turning_internal_`, `ignore_next_internal_stop_`,
@@ -925,7 +925,7 @@ on external stop. No edits needed.
 - [ ] **Step 2: Build**
 
 ```bash
-cd cmu_planner && colcon build --symlink-install --packages-select local_planner
+cd planner && colcon build --symlink-install --packages-select local_planner
 ```
 
 Expected: builds clean.
@@ -939,8 +939,8 @@ Skip the commit.
 ### Task 8: Launch args (cruise.launch + system_real_robot.launch) + multi_frame
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/launch/cruise.launch`
-- Modify: `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch`
+- Modify: `planner/src/local_planner/launch/cruise.launch`
+- Modify: `planner/src/vehicle_simulator/launch/system_real_robot.launch`
 
 **Interfaces:**
 - Consumes: nothing
@@ -973,7 +973,7 @@ And the param in the node block:
 - [ ] **Step 2: Validate cruise.launch XML**
 
 ```bash
-python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('cmu_planner/src/local_planner/launch/cruise.launch'); print('XML OK')"
+python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('planner/src/local_planner/launch/cruise.launch'); print('XML OK')"
 ```
 
 - [ ] **Step 3: system_real_robot.launch — bind + declare + forward `multi_frame`**
@@ -1005,15 +1005,15 @@ Add to `ld.add_action` after `declare_multi_source`:
 - [ ] **Step 4: Validate system_real_robot.launch**
 
 ```bash
-python3 -c "import ast; ast.parse(open('cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch').read()); print('launch OK')"
+python3 -c "import ast; ast.parse(open('planner/src/vehicle_simulator/launch/system_real_robot.launch').read()); print('launch OK')"
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/src/local_planner/launch/cruise.launch \
-        cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
+git add planner/src/local_planner/launch/cruise.launch \
+        planner/src/vehicle_simulator/launch/system_real_robot.launch
 git commit -m "feat(multi): forward multi_frame launch arg (odom|map, default odom)"
 ```
 
@@ -1022,8 +1022,8 @@ git commit -m "feat(multi): forward multi_frame launch arg (odom|map, default od
 ### Task 9: 7multi.sh frame param + RViz Fixed Frame
 
 **Files:**
-- Modify: `cmu_planner/7multi.sh`
-- Modify: `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz`
+- Modify: `planner/7multi.sh`
+- Modify: `planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz`
 
 **Interfaces:**
 - Consumes: `system_real_robot.launch` args (`enableCruise`, `multi_enabled`, `multi_source`,
@@ -1079,8 +1079,8 @@ ros2 launch vehicle_simulator system_real_robot.launch \
 - [ ] **Step 2: Make executable + syntax check**
 
 ```bash
-chmod +x cmu_planner/7multi.sh
-bash -n cmu_planner/7multi.sh && echo "syntax OK"
+chmod +x planner/7multi.sh
+bash -n planner/7multi.sh && echo "syntax OK"
 ```
 
 - [ ] **Step 3: RViz config — Fixed Frame → odom**
@@ -1104,14 +1104,14 @@ clicking waypoints — clicks are otherwise published in `odom` and rejected
 - [ ] **Step 4: Validate rviz file is still parseable YAML**
 
 ```bash
-python3 -c "import yaml; yaml.safe_load(open('cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz')); print('rviz YAML OK')"
+python3 -c "import yaml; yaml.safe_load(open('planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz')); print('rviz YAML OK')"
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
 # from repo root (/home/yu/Codes_rk is the workspace root)
-git add cmu_planner/7multi.sh cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz
+git add planner/7multi.sh planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz
 git commit -m "feat(multi): 7multi.sh frame param (odom|map); RViz Fixed Frame odom"
 ```
 

@@ -53,7 +53,7 @@ MULTI generalizes this: a waypoint **queue** replaces the single `dest`/`start` 
 
 ## Requirements
 
-**R1 — Launch script `7multi.sh`.** New `cmu_planner/7multi.sh` (executable):
+**R1 — Launch script `7multi.sh`.** New `planner/7multi.sh` (executable):
 
 ```bash
 #!/bin/bash
@@ -146,7 +146,7 @@ multi_cruise:
 
 Per-waypoint optional overrides: `turn_angle` (default 0.0), `wait_time`
 (default = `default_wait_time`; `0.0` = no wait). Source file lives at
-`cmu_planner/src/local_planner/config/multi_route.yaml`; the **installed** copy is
+`planner/src/local_planner/config/multi_route.yaml`; the **installed** copy is
 `share/local_planner/config/multi_route.yaml`. The `multi_route_file` param default
 is resolved at runtime via `ament_index_cpp::get_package_share_directory("local_planner")
 + "/config/multi_route.yaml"` (robust to both `colcon build` and installed deploy).
@@ -282,14 +282,14 @@ in both `CMakeLists.txt` (`find_package` + `ament_target_dependencies`) and
 
 | File | Action | Details |
 |------|--------|---------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | `Waypoint` struct; `waypoints_`, `waypoint_index_`, `completed_loops_`, `closing_loop_`, `active_goal_odom_`; MULTI states (`WAIT_LOCALIZATION`, `COLLECTING_WAYPOINTS`, `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`); `/multi_waypoint_add` sub; `/multi_start` service; `/multi_waypoints` MarkerArray pub (reliable+transient_local); `loadYaml()`; `publishMarkers()`; `advanceWaypoint()`; `tf2_ros::Buffer` + `TransformListener` (odom→map); params (`multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time`); `[MULTI]` logs. |
-| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Add `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time` args → node params. |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time` into cruise include. |
-| `cmu_planner/src/local_planner/CMakeLists.txt` | Modify | Add yaml-cpp, visualization_msgs, std_srvs, tf2, tf2_ros, tf2_geometry_msgs; install `config/` dir. |
-| `cmu_planner/src/local_planner/package.xml` | Modify | Add yaml-cpp, visualization_msgs, std_srvs, tf2, tf2_ros, tf2_geometry_msgs depends. |
-| `cmu_planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route (route only). |
-| `cmu_planner/7multi.sh` | Create | Executable launcher (yaml|rviz mode + loop_count). |
-| `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | MarkerArray display + PublishPoint tool. |
+| `planner/src/local_planner/src/cruiseController.cpp` | Modify | `Waypoint` struct; `waypoints_`, `waypoint_index_`, `completed_loops_`, `closing_loop_`, `active_goal_odom_`; MULTI states (`WAIT_LOCALIZATION`, `COLLECTING_WAYPOINTS`, `GO_TO_WAYPOINT`, `TURN_AT_WAYPOINT`, `WAIT_AT_WAYPOINT`); `/multi_waypoint_add` sub; `/multi_start` service; `/multi_waypoints` MarkerArray pub (reliable+transient_local); `loadYaml()`; `publishMarkers()`; `advanceWaypoint()`; `tf2_ros::Buffer` + `TransformListener` (odom→map); params (`multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time`); `[MULTI]` logs. |
+| `planner/src/local_planner/launch/cruise.launch` | Modify | Add `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time` args → node params. |
+| `planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `multi_enabled`, `multi_source`, `multi_route_file`, `default_wait_time` into cruise include. |
+| `planner/src/local_planner/CMakeLists.txt` | Modify | Add yaml-cpp, visualization_msgs, std_srvs, tf2, tf2_ros, tf2_geometry_msgs; install `config/` dir. |
+| `planner/src/local_planner/package.xml` | Modify | Add yaml-cpp, visualization_msgs, std_srvs, tf2, tf2_ros, tf2_geometry_msgs depends. |
+| `planner/src/local_planner/config/multi_route.yaml` | Create | Default YAML route (route only). |
+| `planner/7multi.sh` | Create | Executable launcher (yaml|rviz mode + loop_count). |
+| `planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | MarkerArray display + PublishPoint tool. |
 
 ## Testing / Verification
 

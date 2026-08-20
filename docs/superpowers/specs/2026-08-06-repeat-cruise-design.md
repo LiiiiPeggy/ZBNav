@@ -98,10 +98,10 @@ stop, retarget. `5repeat.sh` shows only these.
 
 | File | Action | Details |
 |------|--------|---------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | New params (`repeat_enabled`, `loop_count`), members (`completed_loops_`, `turning_internal_`, `ignore_next_internal_stop_`, `pending_stop_`), `/stop` subscription + callback, retarget logic in `waypointCallback`, loop-back in `TURN_AT_START`, `consumePendingStop()` at both turn-completion points, `[REPEAT]` logs. |
-| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Declare/pass `repeat_enabled`, `loop_count` to node. |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Add `repeat_enabled`, `loop_count` launch args; forward to `cruise.launch` include. |
-| `cmu_planner/5repeat.sh` | Create | Reuse `system_real_robot.launch`, pass repeat args, grep `[REPEAT]`. |
+| `planner/src/local_planner/src/cruiseController.cpp` | Modify | New params (`repeat_enabled`, `loop_count`), members (`completed_loops_`, `turning_internal_`, `ignore_next_internal_stop_`, `pending_stop_`), `/stop` subscription + callback, retarget logic in `waypointCallback`, loop-back in `TURN_AT_START`, `consumePendingStop()` at both turn-completion points, `[REPEAT]` logs. |
+| `planner/src/local_planner/launch/cruise.launch` | Modify | Declare/pass `repeat_enabled`, `loop_count` to node. |
+| `planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Add `repeat_enabled`, `loop_count` launch args; forward to `cruise.launch` include. |
+| `planner/5repeat.sh` | Create | Reuse `system_real_robot.launch`, pass repeat args, grep `[REPEAT]`. |
 
 ## State Machine Detail
 

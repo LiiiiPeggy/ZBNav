@@ -25,17 +25,17 @@
 
 | File | Action | Responsibility |
 |------|--------|----------------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | Repeat params, members, `/stop` sub, retarget, loop-back, `[REPEAT]` logs |
-| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | Declare/pass `repeat_enabled`, `loop_count` |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `repeat_enabled`, `loop_count` into cruise.launch include |
-| `cmu_planner/5repeat.sh` | Create | Launch main system + cruise repeat, grep `REPEAT` |
+| `planner/src/local_planner/src/cruiseController.cpp` | Modify | Repeat params, members, `/stop` sub, retarget, loop-back, `[REPEAT]` logs |
+| `planner/src/local_planner/launch/cruise.launch` | Modify | Declare/pass `repeat_enabled`, `loop_count` |
+| `planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Forward `repeat_enabled`, `loop_count` into cruise.launch include |
+| `planner/5repeat.sh` | Create | Launch main system + cruise repeat, grep `REPEAT` |
 
 ---
 
 ### Task 1: Add repeat params and members to cruiseController.cpp
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: nothing (internal)
@@ -80,7 +80,7 @@ In the constructor after the declares, add:
 - [ ] **Step 4: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 colcon build --symlink-install --packages-select local_planner
 ```
 
@@ -89,7 +89,7 @@ Expected: builds clean.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(repeat): add repeat_enabled/loop_count params and loop members"
 ```
 
@@ -98,7 +98,7 @@ git commit -m "feat(repeat): add repeat_enabled/loop_count params and loop membe
 ### Task 2: Add /stop subscription and callback
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `turning_internal_`, `pending_stop_`, `completed_loops_`, `state_`, `publishZeroCmd()`
@@ -159,7 +159,7 @@ Add to the subscription member block (near line 247):
 - [ ] **Step 4: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 colcon build --symlink-install --packages-select local_planner
 ```
 
@@ -168,7 +168,7 @@ Expected: builds clean.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(repeat): add /stop external stop subscription and callback"
 ```
 
@@ -177,7 +177,7 @@ git commit -m "feat(repeat): add /stop external stop subscription and callback"
 ### Task 3: Set turning flags, consumePendingStop helper, and loop-back in TURN states
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `repeat_enabled_`, `loop_count_`, `completed_loops_`, `pending_stop_`, `start_/dest_`, `turning_internal_`, `ignore_next_internal_stop_`
@@ -343,7 +343,7 @@ Add `#include <string>` to the includes at the top of the file.
 - [ ] **Step 7: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 colcon build --symlink-install --packages-select local_planner
 ```
 
@@ -352,7 +352,7 @@ Expected: builds clean.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(repeat): loop-back in TURN_AT_START, turning_internal_ + ignore flags, [REPEAT] logs"
 ```
 
@@ -361,7 +361,7 @@ git commit -m "feat(repeat): loop-back in TURN_AT_START, turning_internal_ + ign
 ### Task 4: Mid-cruise retarget in waypointCallback
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `repeat_enabled_`, `state_`, `current_`, `dest_`, `start_`, counters
@@ -419,7 +419,7 @@ Replace `waypointCallback()` (lines 92-116):
 - [ ] **Step 2: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 colcon build --symlink-install --packages-select local_planner
 ```
 
@@ -428,7 +428,7 @@ Expected: builds clean.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add cmu_planner/src/local_planner/src/cruiseController.cpp
+git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(repeat): mid-cruise retarget with loop reset in repeat mode"
 ```
 
@@ -437,7 +437,7 @@ git commit -m "feat(repeat): mid-cruise retarget with loop reset in repeat mode"
 ### Task 5: Pass repeat params through cruise.launch
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/launch/cruise.launch`
+- Modify: `planner/src/local_planner/launch/cruise.launch`
 
 **Interfaces:**
 - Consumes: nothing
@@ -472,13 +472,13 @@ Replace `cruise.launch` content:
 - [ ] **Step 2: Validate XML syntax**
 
 ```bash
-python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('/home/yu/Codes_rk/cmu_planner/src/local_planner/launch/cruise.launch'); print('XML OK')"
+python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('/home/yu/Codes_rk/planner/src/local_planner/launch/cruise.launch'); print('XML OK')"
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add cmu_planner/src/local_planner/launch/cruise.launch
+git add planner/src/local_planner/launch/cruise.launch
 git commit -m "feat(repeat): forward repeat_enabled/loop_count in cruise.launch"
 ```
 
@@ -487,7 +487,7 @@ git commit -m "feat(repeat): forward repeat_enabled/loop_count in cruise.launch"
 ### Task 6: Forward repeat args through system_real_robot.launch
 
 **Files:**
-- Modify: `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch`
+- Modify: `planner/src/vehicle_simulator/launch/system_real_robot.launch`
 
 **Interfaces:**
 - Consumes: nothing
@@ -540,14 +540,14 @@ After `ld.add_action(declare_rvizWaypointTopic)` (line 104), add:
 - [ ] **Step 5: Validate syntax**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner
+cd /home/yu/Codes_rk/planner
 python3 -c "import ast; ast.parse(open('src/vehicle_simulator/launch/system_real_robot.launch').read()); print('launch OK')"
 ```
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
+git add planner/src/vehicle_simulator/launch/system_real_robot.launch
 git commit -m "feat(repeat): forward repeat_enabled/loop_count in system_real_robot.launch"
 ```
 
@@ -556,7 +556,7 @@ git commit -m "feat(repeat): forward repeat_enabled/loop_count in system_real_ro
 ### Task 7: Create 5repeat.sh
 
 **Files:**
-- Create: `cmu_planner/5repeat.sh`
+- Create: `planner/5repeat.sh`
 
 **Interfaces:**
 - Consumes: `system_real_robot.launch` args `enableCruise`, `rvizWaypointTopic`, `repeat_enabled`, `loop_count`
@@ -585,19 +585,19 @@ ros2 launch vehicle_simulator system_real_robot.launch \
 - [ ] **Step 2: Make executable**
 
 ```bash
-chmod +x /home/yu/Codes_rk/cmu_planner/5repeat.sh
+chmod +x /home/yu/Codes_rk/planner/5repeat.sh
 ```
 
 - [ ] **Step 3: Verify it parses (no launch yet — requires hardware)**
 
 ```bash
-bash -n /home/yu/Codes_rk/cmu_planner/5repeat.sh && echo "syntax OK"
+bash -n /home/yu/Codes_rk/planner/5repeat.sh && echo "syntax OK"
 ```
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add cmu_planner/5repeat.sh
+git add planner/5repeat.sh
 git commit -m "feat(repeat): add 5repeat.sh launcher for repeat cruise (grep REPEAT)"
 ```
 

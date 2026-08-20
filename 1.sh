@@ -120,9 +120,9 @@ source install/setup.bash
 
 
 # ============================================================
-# 6. 编译 cmu_planner (规划栈)
+# 6. 编译 planner (规划栈)
 # ============================================================
-cd ~/work/wyx/lqp/cmu_planner
+cd ~/work/wyx/lqp/planner
 colcon build --symlink-install
 source install/setup.bash
 
@@ -144,7 +144,7 @@ source ~/work/wyx/lqp/SLAM/install/setup.bash
 ros2 launch super_lio velodyne.py    # LiDAR: /velodyne_points, IMU: /Devices/Imu/Data
 
 # 终端3: CMU 规划 (已移除 super_lio_bridge，topic 由 remap 直连)
-source ~/work/wyx/lqp/cmu_planner/install/setup.bash
+source ~/work/wyx/lqp/planner/install/setup.bash
 ros2 launch vehicle_simulator system_real_robot.launch
 
 
@@ -154,7 +154,7 @@ source ~/work/wyx/lqp/SLAM/install/setup.bash
 ros2 launch odin_ros_driver odin1_ros2.launch.py
 
 # 终端2: CMU 规划
-source ~/work/wyx/lqp/cmu_planner/install/setup.bash
+source ~/work/wyx/lqp/planner/install/setup.bash
 ros2 launch vehicle_simulator system_real_robot.launch
 
 

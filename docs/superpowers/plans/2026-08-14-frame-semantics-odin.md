@@ -6,7 +6,7 @@
 
 **Architecture:** The motion-control TF tree (`map → base → legs…`) is untouched and stays a separate, unconnected tree. All Odin frame labels that are currently bare `"odom"` / `"map"` become `"odin_odom"` / `"odin_map"`. The CMU planner chain (`/state_estimation`, `/registered_scan`, `/terrain_map`, local planning, terrain analysis) operates entirely in `odin_odom`. Cruise/multi accepts goals in `odin_odom` directly (no-map) or transforms `odin_map → odin_odom` at the cruise layer when the relocalization TF exists; goals labeled with the motion-control `"map"` are rejected. Frame strings are parameterized (`planning_frame` = `"odin_odom"`, `global_frame` = `"odin_map"`) instead of hardcoded.
 
-**Tech Stack:** C++ (ROS 2 Humble), tf2, PCL. Files span `odin_ros_driver` (SLAM ws), `local_planner` / `terrain_analysis` / `terrain_analysis_ext` / `sensor_scan_generation` / `waypoint_rviz_plugin` / `vehicle_simulator` (cmu_planner ws).
+**Tech Stack:** C++ (ROS 2 Humble), tf2, PCL. Files span `odin_ros_driver` (SLAM ws), `local_planner` / `terrain_analysis` / `terrain_analysis_ext` / `sensor_scan_generation` / `waypoint_rviz_plugin` / `vehicle_simulator` (planner ws).
 
 ## Global Constraints
 
@@ -23,8 +23,8 @@
 - Do NOT restructure planner algorithms, path-planning params, or avoidance params. Minimal changes only.
 - Project marker rule: leading `// ################################` + `// C++: <description>` (C++), `# ################################` + `# Bash:` (bash), `# YAML:` (yaml), `<!-- XML: -->` (launch XML) markers on new/modified blocks; no END markers.
 - Commit messages have NO `Co-Authored-By` trailer.
-- Build commands run from the workspace root of each package (`/home/yu/Codes_rk/SLAM` for odin_ros_driver, `/home/yu/Codes_rk/cmu_planner` for the planner packages), after `source /opt/ros/humble/setup.bash`.
-- Working tree contains unrelated untracked junk (`.claude/`, `SLAM/src/odin_ros_driver/config/control_command backup.yaml`, `cmu_planner/src/vehicle_simulator/launch/__pycache__/`) — never stage or commit it; stage only the exact files each task names.
+- Build commands run from the workspace root of each package (`/home/yu/Codes_rk/SLAM` for odin_ros_driver, `/home/yu/Codes_rk/planner` for the planner packages), after `source /opt/ros/humble/setup.bash`.
+- Working tree contains unrelated untracked junk (`.claude/`, `SLAM/src/odin_ros_driver/config/control_command backup.yaml`, `planner/src/vehicle_simulator/launch/__pycache__/`) — never stage or commit it; stage only the exact files each task names.
 
 ---
 
@@ -34,16 +34,16 @@
 |------|--------|----------------|
 | `SLAM/src/odin_ros_driver/include/host_sdk_sample.h` | Modify | Rename Odin frame labels `"odom"→"odin_odom"`, Odin `"map"→"odin_map"` |
 | `SLAM/src/odin_ros_driver/src/registered_scan_adapter_node.cpp` | No change | Already preserves the input header — inherits `odin_odom` automatically |
-| `cmu_planner/src/sensor_scan_generation/src/sensorScanGeneration.cpp` | Modify | `planning_frame` param; drop hardcoded `"map"` |
-| `cmu_planner/src/terrain_analysis/src/terrainAnalysis.cpp` | Modify | state/registered frame-mismatch check + `[FRAME]` first-data log |
-| `cmu_planner/src/terrain_analysis_ext/src/terrainAnalysisExt.cpp` | Modify | same mismatch check + log |
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Modify | `multi_frame` odin_ values, `planning_frame`/`global_frame` params, goal frame policy, TF frames, logs |
-| `cmu_planner/src/waypoint_rviz_plugin/src/waypoint_tool.cpp` | Modify | `waypoint.header.frame_id` from Fixed Frame, not `"map"` |
-| `cmu_planner/7multi.sh` / `9multi_debug.sh` | Modify | `frame=${3:-odin_odom}`, validation + legacy normalization, usage text |
-| `cmu_planner/src/local_planner/launch/cruise.launch` | Modify | `multi_frame` default `odin_odom` + `planning_frame`/`global_frame` args/params |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | `multi_frame` default `odin_odom` + `planning_frame`/`global_frame` declares/forwarding, description |
-| `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | Fixed Frame `odin_odom` |
-| `cmu_planner/src/loam_interface/src/loamInterface.cpp` | **No change** | Legacy LOAM path, not launched by Odin pipeline (documented) |
+| `planner/src/sensor_scan_generation/src/sensorScanGeneration.cpp` | Modify | `planning_frame` param; drop hardcoded `"map"` |
+| `planner/src/terrain_analysis/src/terrainAnalysis.cpp` | Modify | state/registered frame-mismatch check + `[FRAME]` first-data log |
+| `planner/src/terrain_analysis_ext/src/terrainAnalysisExt.cpp` | Modify | same mismatch check + log |
+| `planner/src/local_planner/src/cruiseController.cpp` | Modify | `multi_frame` odin_ values, `planning_frame`/`global_frame` params, goal frame policy, TF frames, logs |
+| `planner/src/waypoint_rviz_plugin/src/waypoint_tool.cpp` | Modify | `waypoint.header.frame_id` from Fixed Frame, not `"map"` |
+| `planner/7multi.sh` / `9multi_debug.sh` | Modify | `frame=${3:-odin_odom}`, validation + legacy normalization, usage text |
+| `planner/src/local_planner/launch/cruise.launch` | Modify | `multi_frame` default `odin_odom` + `planning_frame`/`global_frame` args/params |
+| `planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | `multi_frame` default `odin_odom` + `planning_frame`/`global_frame` declares/forwarding, description |
+| `planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz` | Modify | Fixed Frame `odin_odom` |
+| `planner/src/loam_interface/src/loamInterface.cpp` | **No change** | Legacy LOAM path, not launched by Odin pipeline (documented) |
 
 ---
 
@@ -142,7 +142,7 @@ git commit -m "feat(odin): odin_odom/odin_map frames, invert relocalization TF t
 ### Task 2: sensorScanGeneration planning_frame
 
 **Files:**
-- Modify: `cmu_planner/src/sensor_scan_generation/src/sensorScanGeneration.cpp`
+- Modify: `planner/src/sensor_scan_generation/src/sensorScanGeneration.cpp`
 
 **Interfaces:**
 - Consumes: `/state_estimation` (now `odin_odom`), `/registered_scan` (now `odin_odom`)
@@ -223,13 +223,13 @@ In `laserCloudAndOdometryHandler` (signature `(const nav_msgs::msg::Odometry::Co
 - [ ] **Step 4: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select sensor_scan_generation
+cd /home/yu/Codes_rk/planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select sensor_scan_generation
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /home/yu/Codes_rk && git add cmu_planner/src/sensor_scan_generation/src/sensorScanGeneration.cpp
+cd /home/yu/Codes_rk && git add planner/src/sensor_scan_generation/src/sensorScanGeneration.cpp
 git commit -m "feat(sensor_scan): planning_frame param, input frame-consistency check"
 ```
 
@@ -238,8 +238,8 @@ git commit -m "feat(sensor_scan): planning_frame param, input frame-consistency 
 ### Task 3: terrain frame-mismatch check + logs
 
 **Files:**
-- Modify: `cmu_planner/src/terrain_analysis/src/terrainAnalysis.cpp`
-- Modify: `cmu_planner/src/terrain_analysis_ext/src/terrainAnalysisExt.cpp`
+- Modify: `planner/src/terrain_analysis/src/terrainAnalysis.cpp`
+- Modify: `planner/src/terrain_analysis_ext/src/terrainAnalysisExt.cpp`
 
 **Interfaces:**
 - Consumes: `/state_estimation`, `/registered_scan`
@@ -320,13 +320,13 @@ Mirror Step 1 in `terrainAnalysisExt.cpp` using `rclcpp::get_logger("terrainAnal
 - [ ] **Step 3: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select terrain_analysis terrain_analysis_ext
+cd /home/yu/Codes_rk/planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select terrain_analysis terrain_analysis_ext
 ```
 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /home/yu/Codes_rk && git add cmu_planner/src/terrain_analysis/src/terrainAnalysis.cpp cmu_planner/src/terrain_analysis_ext/src/terrainAnalysisExt.cpp
+cd /home/yu/Codes_rk && git add planner/src/terrain_analysis/src/terrainAnalysis.cpp planner/src/terrain_analysis_ext/src/terrainAnalysisExt.cpp
 git commit -m "feat(terrain): frame-mismatch guard and [FRAME] first-data log"
 ```
 
@@ -335,7 +335,7 @@ git commit -m "feat(terrain): frame-mismatch guard and [FRAME] first-data log"
 ### Task 4: cruiseController frame semantics + goal policy
 
 **Files:**
-- Modify: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Modify: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `multi_frame` param (legacy `"odom"|"map"` normalized), RViz clicks, `/way_point_cruise`
@@ -597,13 +597,13 @@ RViz MultiWaypointTool → /multi_waypoint_add → addWaypointCallback → addMu
 - [ ] **Step 9: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select local_planner
+cd /home/yu/Codes_rk/planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select local_planner
 ```
 
 - [ ] **Step 10: Commit**
 
 ```bash
-cd /home/yu/Codes_rk && git add cmu_planner/src/local_planner/src/cruiseController.cpp
+cd /home/yu/Codes_rk && git add planner/src/local_planner/src/cruiseController.cpp
 git commit -m "feat(multi): odin_ frame semantics, goal-frame policy, planning/global frame params"
 ```
 
@@ -612,7 +612,7 @@ git commit -m "feat(multi): odin_ frame semantics, goal-frame policy, planning/g
 ### Task 5: legacy WaypointTool frame
 
 **Files:**
-- Modify: `cmu_planner/src/waypoint_rviz_plugin/src/waypoint_tool.cpp`
+- Modify: `planner/src/waypoint_rviz_plugin/src/waypoint_tool.cpp`
 
 **Interfaces:**
 - Consumes: RViz current Fixed Frame
@@ -638,13 +638,13 @@ Everything else in `onPoseSet` (the fake `/joy` burst, `/way_point` topic, doubl
 - [ ] **Step 2: Build**
 
 ```bash
-cd /home/yu/Codes_rk/cmu_planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select waypoint_rviz_plugin
+cd /home/yu/Codes_rk/planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select waypoint_rviz_plugin
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /home/yu/Codes_rk && git add cmu_planner/src/waypoint_rviz_plugin/src/waypoint_tool.cpp
+cd /home/yu/Codes_rk && git add planner/src/waypoint_rviz_plugin/src/waypoint_tool.cpp
 git commit -m "feat(rviz): WaypointTool publishes in RViz Fixed Frame, not hardcoded map"
 ```
 
@@ -653,10 +653,10 @@ git commit -m "feat(rviz): WaypointTool publishes in RViz Fixed Frame, not hardc
 ### Task 6: launch / script / RViz defaults
 
 **Files:**
-- Modify: `cmu_planner/7multi.sh`, `cmu_planner/9multi_debug.sh`
-- Modify: `cmu_planner/src/local_planner/launch/cruise.launch`
-- Modify: `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch`
-- Modify: `cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz`
+- Modify: `planner/7multi.sh`, `planner/9multi_debug.sh`
+- Modify: `planner/src/local_planner/launch/cruise.launch`
+- Modify: `planner/src/vehicle_simulator/launch/system_real_robot.launch`
+- Modify: `planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz`
 
 **Interfaces:**
 - Consumes: the `multi_frame` / `planning_frame` / `global_frame` node params (Task 4)
@@ -711,20 +711,20 @@ Same as Step 1: `frame=${3:-odom}` → `frame=${3:-odin_odom}` + the normalizati
 - [ ] **Step 6: Validate + build**
 
 ```bash
-bash -n cmu_planner/7multi.sh && bash -n cmu_planner/9multi_debug.sh && echo "scripts OK"
-python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('cmu_planner/src/local_planner/launch/cruise.launch'); print('cruise.launch OK')"
-python3 -c "import ast; ast.parse(open('cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch').read()); print('launch OK')"
-python3 -c "import yaml; d=yaml.safe_load(open('cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz')); print('rviz Fixed Frame:', d['Visualization Manager']['Global Options']['Fixed Frame'])"
-cd /home/yu/Codes_rk/cmu_planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select vehicle_simulator
+bash -n planner/7multi.sh && bash -n planner/9multi_debug.sh && echo "scripts OK"
+python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('planner/src/local_planner/launch/cruise.launch'); print('cruise.launch OK')"
+python3 -c "import ast; ast.parse(open('planner/src/vehicle_simulator/launch/system_real_robot.launch').read()); print('launch OK')"
+python3 -c "import yaml; d=yaml.safe_load(open('planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz')); print('rviz Fixed Frame:', d['Visualization Manager']['Global Options']['Fixed Frame'])"
+cd /home/yu/Codes_rk/planner && source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select vehicle_simulator
 ```
 
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /home/yu/Codes_rk && git add cmu_planner/7multi.sh cmu_planner/9multi_debug.sh \
-  cmu_planner/src/local_planner/launch/cruise.launch \
-  cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch \
-  cmu_planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz
+cd /home/yu/Codes_rk && git add planner/7multi.sh planner/9multi_debug.sh \
+  planner/src/local_planner/launch/cruise.launch \
+  planner/src/vehicle_simulator/launch/system_real_robot.launch \
+  planner/src/vehicle_simulator/rviz/vehicle_simulator.rviz
 git commit -m "feat(launch): odin_odom/odin_map frame defaults in launchers and RViz"
 ```
 
@@ -851,4 +851,4 @@ none of the tasks cover it, and this plan is strictly about TF frame semantics.
 - **C. Map mode.** After relocalization, `ros2 run tf2_ros tf2_echo odin_map odin_odom` succeeds. MULTI waypoints can be `odin_map`; cruiseController forwards `odin_odom` goals to localPlanner; localPlanner/terrainAnalysis never consume `odin_map`.
 - **D. Frame-mismatch rejection.** Deliberately publish a `/registered_scan` (or a waypoint) with a wrong frame: terrainAnalysis REJECTS (RCLCPP_ERROR, no output) rather than warns-and-continues; cruiseController REJECTS a goal whose TF to planning_frame is unavailable (never treats raw coords as planning-frame coords).
 - **E. RViz MULTI waypoint.** With Fixed Frame `odin_odom`, clicks add to the MULTI list. With Fixed Frame `odin_map` (map mode), clicks add to the MULTI list, keep the `odin_map` frame, and after `/multi_start` are transformed `odin_map → odin_odom` by cruiseController.
-- **F. Build.** At minimum: `odin_ros_driver` (SLAM ws); `terrain_analysis`, `terrain_analysis_ext`, `sensor_scan_generation`, `local_planner` (cruiseController), `waypoint_rviz_plugin`, `vehicle_simulator` (cmu_planner ws) — all build clean with `colcon build --symlink-install`.
+- **F. Build.** At minimum: `odin_ros_driver` (SLAM ws); `terrain_analysis`, `terrain_analysis_ext`, `sensor_scan_generation`, `local_planner` (cruiseController), `waypoint_rviz_plugin`, `vehicle_simulator` (planner ws) — all build clean with `colcon build --symlink-install`.

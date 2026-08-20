@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - C++17 standard (matches odin_ros_driver)
-- Node goes in `cmu_planner/src/local_planner/`
+- Node goes in `planner/src/local_planner/`
 - Uses existing topics: `/way_point`, `/cmd_vel`, `/stop`, `/state_estimation`
 - No changes to existing localPlanner or pathFollower logic
 - Launch via `system_real_robot.launch`
@@ -42,16 +42,16 @@ Key parameters:
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `cmu_planner/src/local_planner/src/cruiseController.cpp` | Create | Main node |
-| `cmu_planner/src/local_planner/CMakeLists.txt` | Modify | Add executable |
-| `cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Add node to launch |
+| `planner/src/local_planner/src/cruiseController.cpp` | Create | Main node |
+| `planner/src/local_planner/CMakeLists.txt` | Modify | Add executable |
+| `planner/src/vehicle_simulator/launch/system_real_robot.launch` | Modify | Add node to launch |
 
 ---
 
 ### Task 1: Create cruiseController node
 
 **Files:**
-- Create: `cmu_planner/src/local_planner/src/cruiseController.cpp`
+- Create: `planner/src/local_planner/src/cruiseController.cpp`
 
 **Interfaces:**
 - Consumes: `/state_estimation` (Odometry), `/way_point` input from user
@@ -285,7 +285,7 @@ int main(int argc, char ** argv)
 
 - [ ] **Step 2: Add to CMakeLists.txt**
 
-In `cmu_planner/src/local_planner/CMakeLists.txt`, add after the pathFollower executable block:
+In `planner/src/local_planner/CMakeLists.txt`, add after the pathFollower executable block:
 
 ```cmake
 add_executable(cruiseController
@@ -323,7 +323,7 @@ Add `ld.add_action(cruise_controller_node)` to LaunchDescription.
 - [ ] **Step 4: Build**
 
 ```bash
-cd ~/work/wyx/lqp/cmu_planner
+cd ~/work/wyx/lqp/planner
 colcon build --symlink-install --packages-select local_planner
 source install/setup.bash
 ```
@@ -346,8 +346,8 @@ Expected behavior:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add cmu_planner/src/local_planner/src/cruiseController.cpp \
-        cmu_planner/src/local_planner/CMakeLists.txt \
-        cmu_planner/src/vehicle_simulator/launch/system_real_robot.launch
+git add planner/src/local_planner/src/cruiseController.cpp \
+        planner/src/local_planner/CMakeLists.txt \
+        planner/src/vehicle_simulator/launch/system_real_robot.launch
 git commit -m "feat: add cruise controller for patrol round-trip with U-turns"
 ```

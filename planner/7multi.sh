@@ -50,7 +50,7 @@ map_args=()
 if [[ "$frame" == "odin_map" ]]; then
   ROOT="$(cd "$(dirname "$0")/.." && pwd)"
   map_args+=(
-    rviz_config_file:="$ROOT/cmu_planner/src/vehicle_simulator/rviz/cruise_map.rviz"
+    rviz_config_file:="$ROOT/planner/src/vehicle_simulator/rviz/cruise_map.rviz"
   )
 fi
 

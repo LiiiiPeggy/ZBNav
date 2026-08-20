@@ -10,15 +10,15 @@ Robotics navigation system: **LiDAR driver → SLAM → path planning + terrain 
 | `rs_converter_ws` | `rs_converter` | RoboSense → Velodyne point cloud format converter |
 | `SLAM` | `basic`, `super_lio`, `odin_ros_driver` | SLAM + Odin depth sensor driver |
 | `LI_init_ws` | `lidar_imu_init` | LiDAR-IMU extrinsic calibration + FAST-LIO2 |
-| `cmu_planner` | `local_planner`, `terrain_analysis`, ... | Path planning, terrain analysis, cruise patrol |
+| `planner` | `local_planner`, `terrain_analysis`, ... | Path planning, terrain analysis, cruise patrol |
 | `supports` | `Livox-SDK2`, `livox_ros_driver2` | Build dependencies |
 
 ### Pipeline
 
 ```
-rslidar_sdk → rs_converter → super_lio ──remap──▶ /state_estimation, /registered_scan ──▶ cmu_planner
+rslidar_sdk → rs_converter → super_lio ──remap──▶ /state_estimation, /registered_scan ──▶ planner
                                                          or
-                              odin_ros_driver ──remap──▶ /state_estimation, /registered_scan ──▶ cmu_planner
+                              odin_ros_driver ──remap──▶ /state_estimation, /registered_scan ──▶ planner
                                                                         │
                                               registered_scan_adapter_node (XYZRGB→XYZI + min-range filter)
                                                                         │
@@ -61,7 +61,7 @@ colcon build --symlink-install --packages-select super_lio
 colcon build --symlink-install --packages-select odin_ros_driver
 
 # 4. Planner
-cd cmu_planner
+cd planner
 colcon build --symlink-install
 ```
 
@@ -83,7 +83,7 @@ source rs_converter_ws/install/setup.bash && ros2 launch rs_converter rs_convert
 source SLAM/install/setup.bash && ros2 launch super_lio velodyne.py
 
 # Terminal 3: Planning
-source cmu_planner/install/setup.bash && ros2 launch vehicle_simulator system_real_robot.launch
+source planner/install/setup.bash && ros2 launch vehicle_simulator system_real_robot.launch
 ```
 
 ### Option B: Odin (built-in SLAM) + CMU planner
@@ -93,7 +93,7 @@ source cmu_planner/install/setup.bash && ros2 launch vehicle_simulator system_re
 source SLAM/install/setup.bash && ros2 launch odin_ros_driver odin1_ros2.launch.py
 
 # Terminal 2: Planning
-source cmu_planner/install/setup.bash && ros2 launch vehicle_simulator system_real_robot.launch
+source planner/install/setup.bash && ros2 launch vehicle_simulator system_real_robot.launch
 ```
 
 ### Odin map save & relocalization
@@ -144,20 +144,20 @@ same time as `3run_relocalization.sh` (both would publish `/overall_map`).
 
 ### Option C: Odin + one-click scripts
 
-Convenience scripts live in the workspace root (`1.sh`) and `cmu_planner/`:
+Convenience scripts live in the workspace root (`1.sh`) and `planner/`:
 
 | Script | Purpose |
 |--------|---------|
 | `1.sh` | Full build (Docker + all workspaces) |
-| `cmu_planner/1build.sh` | Build cmu_planner only |
-| `cmu_planner/2run.sh` | Launch main planner stack (no cruise) |
-| `cmu_planner/3cruise.sh` | Launch planner **with cruise**, output filtered to `[CRUISE]` lines |
-| `cmu_planner/4debug_cruise.sh` | Launch planner with cruise, full output (debug) |
-| `cmu_planner/5repeat180.sh` | Launch planner with **repeat cruise**, filtered to `[REPEAT]`/`[CRUISE]`; `./5repeat180.sh [N]` = N round-trips, default infinite (turn_angle=180°) |
-| `cmu_planner/6debug_repeat.sh` | Launch planner with repeat cruise, full output (debug) |
-| `cmu_planner/7multi.sh` | Launch planner with **MULTI cruise** (`[yaml|rviz] [loop_count] [odin_odom|odin_map]`); `odin_map` auto-opens `cruise_map.rviz` and consumes the SLAM-published `/overall_map` |
-| `cmu_planner/8multi_start.sh` | Call `/multi_start` to start a collected RViz route |
-| `cmu_planner/9multi_debug.sh` | MULTI cruise, full output |
+| `planner/1build.sh` | Build planner only |
+| `planner/2run.sh` | Launch main planner stack (no cruise) |
+| `planner/3cruise.sh` | Launch planner **with cruise**, output filtered to `[CRUISE]` lines |
+| `planner/4debug_cruise.sh` | Launch planner with cruise, full output (debug) |
+| `planner/5repeat180.sh` | Launch planner with **repeat cruise**, filtered to `[REPEAT]`/`[CRUISE]`; `./5repeat180.sh [N]` = N round-trips, default infinite (turn_angle=180°) |
+| `planner/6debug_repeat.sh` | Launch planner with repeat cruise, full output (debug) |
+| `planner/7multi.sh` | Launch planner with **MULTI cruise** (`[yaml|rviz] [loop_count] [odin_odom|odin_map]`); `odin_map` auto-opens `cruise_map.rviz` and consumes the SLAM-published `/overall_map` |
+| `planner/8multi_start.sh` | Call `/multi_start` to start a collected RViz route |
+| `planner/9multi_debug.sh` | MULTI cruise, full output |
 | `SLAM/2run_slam.sh` | Odin SLAM mapping (mode 1), Odin RViz on, no `/overall_map` |
 | `SLAM/3run_relocalization.sh` | Odin relocalization (mode 2), Odin RViz on, publishes `/overall_map` |
 | `SLAM/4trans2pcd.sh` | Convert saved `.bin` map to `.ply` via `map_to_ply` (arm64/amd64 auto-selected) |
@@ -185,7 +185,7 @@ place → return to start → turn 180° → stop.
 
 Launch:
 ```bash
-cd cmu_planner && ./3cruise.sh          # or ./4debug_cruise.sh for full output
+cd planner && ./3cruise.sh          # or ./4debug_cruise.sh for full output
 ```
 
 Parameters (override on command line):
@@ -222,8 +222,8 @@ behavior above — `3cruise.sh` unaffected.
 
 Launch:
 ```bash
-cd cmu_planner && ./5repeat180.sh       # infinite loops
-cd cmu_planner && ./5repeat180.sh 3     # exactly 3 round-trips
+cd planner && ./5repeat180.sh       # infinite loops
+cd planner && ./5repeat180.sh 3     # exactly 3 round-trips
 ```
 
 | Param | Default | Meaning |
@@ -256,7 +256,7 @@ Repeat log output (filter with `grep REPEAT`):
 in RViz or from a YAML route file.
 
 ```bash
-cd cmu_planner
+cd planner
 bash 7multi.sh                    # default: RViz clicks, odin_odom frame (no map needed)
 bash 7multi.sh rviz -1 odin_map   # map-mode MULTI: cruise_map.rviz + SLAM /overall_map
 bash 7multi.sh yaml -1 odin_map   # YAML route in map frame

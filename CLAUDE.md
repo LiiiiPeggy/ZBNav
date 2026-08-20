@@ -32,8 +32,8 @@ colcon build --symlink-install --packages-select basic
 colcon build --symlink-install --packages-select super_lio
 colcon build --symlink-install --packages-select odin_ros_driver
 
-# 4. cmu_planner — planning stack
-cd cmu_planner
+# 4. planner — planning stack
+cd planner
 colcon build --symlink-install
 ```
 
@@ -60,9 +60,9 @@ Each workspace is an **independent colcon workspace** — source them separately
 ### Pipeline
 
 ```
-rslidar_sdk (driver) → rs_converter (format) → SLAM/super_lio (odometry) → cmu_planner (planning)
+rslidar_sdk (driver) → rs_converter (format) → SLAM/super_lio (odometry) → planner (planning)
                                                        ↓
-                                              Odin 自带 SLAM → cmu_planner (planning)
+                                              Odin 自带 SLAM → planner (planning)
 ```
 
 Two interchangeable SLAM backends, both remap to the same CMU planner topics. When using Odin, `registered_scan_adapter_node` (in `odin_ros_driver`) converts its `PointXYZRGB` `/odin1/cloud_slam` into the `PointXYZI` format CMU planner expects (drops rgb, sets `intensity=0`, filters points closer than `scan_min_range` from the vehicle via `/state_estimation`), publishing to `/registered_scan`.
@@ -76,7 +76,7 @@ Two interchangeable SLAM backends, both remap to the same CMU planner topics. Wh
   - `basic` — shared library: Eigen type aliases, manifold math (SO3/SE3/S2), ring buffers (must be built first)
   - `super_lio` — ESKF-based LIO with 18-D state (R, p, v, bg, ba, g). OctVoxMap for scan-to-map registration. State machine: `stateWaitKFInit` → `stateWaitMapInit` → `stateProcess`. Nodes: `super_lio_node` (online SLAM), `relocation_node` (global localization against pre-built map)
   - `odin_ros_driver` — Odin 深度传感器 ROS 2 驱动，自带 SLAM 里程计和建图。配置拆分为 `control_command.yaml`（活动配置，mode 2）、`control_command_slam.yaml`（mode 1）、`control_command_relocalization.yaml`（与活动配置逐字节一致，mode 2）。`custom_map_mode`: 0=里程计, 1=SLAM 建图, 2=重定位（需 `relocalization_map_abs_path` 指向 `.bin` 地图）。`.bin` 地图是设备私有格式（`lidar_set_relocalization_map` 直接交给设备解析，SDK 无"取回地图点云"接口）；`./set_param.sh save_map 1` 保存，地图仅几何、无颜色，只用于重定位不用于可视化。**`/overall_map` 所有权在 SLAM**：`3run_relocalization.sh` 启动重定位时 `odin1_ros2.launch.py` 的 `publish_overall_map:=true` + `overall_map_pcd` 会启动 `pcl_ros/pcd_to_pointcloud` 把 `.pcd`（与 `.bin` 同目录，经 `map_downsample` 工具从 PLY 转换）发布为 `/overall_map`（`frame_id=odin_map`，周期 10000 ms）。launch 参数：`enable_rviz`（默认 true）、`publish_overall_map`（默认 false）、`overall_map_pcd`。
-- **`cmu_planner`** — Path planning and terrain analysis stack (CMU):
+- **`planner`** — Path planning and terrain analysis stack (CMU):
   - `local_planner` — local path planning + path following; also hosts `cruiseController` (patrol: go → turn 180° → return → turn 180°; yaw-closed-loop turning via `/state_estimation`). Repeat mode via `repeat_enabled`/`loop_count` params: loops back-and-forth N round-trips (-1 = infinite), external `/stop=2` aborts (self-published stops ignored via `ignore_next_internal_stop_`, queued stops consumed at both turn completions via `consumePendingStop()`), mid-cruise retarget resets loops. **MULTI mode** (`multi_enabled` + `multi_source` `yaml|rviz` + `multi_frame` `odin_odom|odin_map`, default `odin_odom`): closed-loop waypoint route; waypoints come from YAML or RViz clicks, always stored in `multi_frame_` coords (`odin_odom` mode needs only `/state_estimation`; `odin_map` mode TF-converts each waypoint `odin_map→odin_odom` at leg start). RViz clicks are frame-agnostic — `addWaypointCallback()` transforms any input frame to `multi_frame_`. `/multi_start` (Trigger service) publishes `/cruise_autonomy=true` so local_planner/pathFollower ignore `/joy` during MULTI; released on external `/stop=2` or finite-loop completion
   - `terrain_analysis` / `terrain_analysis_ext` — terrain traversability analysis
   - `sensor_scan_generation` — synthetic scan generation for planning
@@ -150,4 +150,4 @@ SLAM 输出通过 launch 文件 remap 统一对接 CMU 规划栈，**无需 brid
 
 ## Branches
 
-`main` → `cruise` (SINGLE/REPEAT patrol, field-verified) → `multi` (MULTI multi-point cruise + MultiWaypointTool + `/cruise_autonomy`, field-verified no-map state) → `mapmulti` (current working branch; map-mode MULTI — `/overall_map` owned by SLAM, `cruise_map.rviz` map-view, `multi_frame=odin_map`; the cmu_planner-publisher approach in its early history is superseded).
+`main` → `cruise` (SINGLE/REPEAT patrol, field-verified) → `multi` (MULTI multi-point cruise + MultiWaypointTool + `/cruise_autonomy`, field-verified no-map state) → `mapmulti` (current working branch; map-mode MULTI — `/overall_map` owned by SLAM, `cruise_map.rviz` map-view, `multi_frame=odin_map`; the planner-publisher approach in its early history is superseded).
