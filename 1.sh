@@ -10,11 +10,16 @@
 # MobaXterm SSH X11 转发：容器 --net=host 下访问不到 localhost 隧道，
 # 需获取 MobaXterm 所在 Windows 的真实 IP 作为 DISPLAY 地址。
 xhost + 2>/dev/null
-DISPLAY_IP=$(echo $SSH_CLIENT | awk '{print $1}')
-if [ -z "$DISPLAY_IP" ]; then
-    DISPLAY_IP="localhost"
-fi
-echo "DISPLAY_IP=$DISPLAY_IP"
+
+echo $SSH_CLIENT | awk '{print $1}'
+输出IP
+echo 'export DISPLAY=192.168.100.111:0.0'  >> ~/.bashrc
+
+其中我的笔记本的ip是 192.168.100.111
+export DISPLAY=192.168.100.111:0.0
+其中我的笔记本的ip是 192.168.200.150
+export DISPLAY=192.168.200.150:0.0
+
 
 # 删除旧容器
 docker stop nav_gui 2>/dev/null; docker rm nav_gui 2>/dev/null
