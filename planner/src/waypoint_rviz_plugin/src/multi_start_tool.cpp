@@ -30,7 +30,7 @@ void MultiStartTool::activate()
   // ################################
   if (!client_ || !client_->service_is_ready()) {
     RCLCPP_WARN(node_->get_logger(),
-      "[MULTI] /multi_start service not available (is cruiseController running?)");
+      "[START] /multi_start service not available (is cruiseController running?)");
   } else {
     auto req = std::make_shared<std_srvs::srv::Trigger::Request>();
     client_->async_send_request(req,
@@ -38,13 +38,13 @@ void MultiStartTool::activate()
         try {
           auto res = future.get();
           if (res->success) {
-            RCLCPP_INFO(node_->get_logger(), "[MULTI] %s", res->message.c_str());
+            RCLCPP_INFO(node_->get_logger(), "[START] %s", res->message.c_str());
           } else {
-            RCLCPP_WARN(node_->get_logger(), "[MULTI] %s", res->message.c_str());
+            RCLCPP_WARN(node_->get_logger(), "[START] %s", res->message.c_str());
           }
         } catch (const std::exception & e) {
           RCLCPP_ERROR(node_->get_logger(),
-            "[MULTI] /multi_start service call failed: %s", e.what());
+            "[START] /multi_start service call failed: %s", e.what());
         }
       });
   }

@@ -197,17 +197,25 @@ public:
     if (multi_enabled_) {
       if (multi_source_ == "yaml") {
         loadYaml();
+        // ################################
+        // C++: keep invalid YAML routes idle instead of WAIT_LOCALIZATION
+        // ################################
         if (waypoints_.size() < 2) {
           RCLCPP_ERROR(this->get_logger(),
             "[MULTI] multi_route.yaml has <2 waypoints (%zu); staying IDLE",
             waypoints_.size());
+          state_ = CruiseState::IDLE;
+          publishMarkers();
+        } else {
+          state_ = CruiseState::WAIT_LOCALIZATION;
+          publishMarkers();
         }
       } else {
         RCLCPP_INFO(this->get_logger(),
           "[MULTI] RViz mode: waiting for pose, then collect waypoints");
+        state_ = CruiseState::WAIT_LOCALIZATION;
+        publishMarkers();
       }
-      state_ = CruiseState::WAIT_LOCALIZATION;
-      publishMarkers();
     }
 
     waypoint_pub_ = this->create_publisher<geometry_msgs::msg::PointStamped>(
@@ -222,7 +230,7 @@ public:
       std::bind(&CruiseController::controlLoop, this));
 
     RCLCPP_INFO(this->get_logger(),
-      "Cruise controller ready. Send waypoint to /way_point_cruise to start.");
+      "Cruise controller ready. Prepare waypoint/route, then press Start Multi.");
   }
 
 private:
@@ -522,10 +530,13 @@ private:
         "[MULTI] Pose ready (frame=%s), proceeding", multi_frame_.c_str());
       if (multi_source_ == "yaml") {
         if (waypoints_.size() < 2) {
-          RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
-            "[MULTI] YAML route has <2 waypoints (%zu); cannot enter ready-to-start",
-            waypoints_.size());
-          return;  // stay in WAIT_LOCALIZATION; never auto-start
+          // ################################
+          // C++: defensive guard — invalid YAML routes go idle (normally caught at startup)
+          // ################################
+          RCLCPP_ERROR(this->get_logger(),
+            "[MULTI] YAML route invalid: <2 waypoints");
+          state_ = CruiseState::IDLE;
+          return;
         }
         // ################################
         // C++: hold YAML route at READY_TO_START until explicit /multi_start
@@ -1185,6 +1196,11 @@ private:
       res->success = true;
       res->message = "Starting repeat cruise";
       RCLCPP_INFO(this->get_logger(), "[REPEAT] /multi_start accepted; starting cruise");
+      // ################################
+      // C++: lock actual repeat cruise start pose on explicit start
+      // ################################
+      start_x_ = current_x_;
+      start_y_ = current_y_;
       completed_loops_ = 0;
       pending_stop_ = false;
       turning_internal_ = false;
@@ -1202,6 +1218,11 @@ private:
     res->success = true;
     res->message = "Starting single cruise";
     RCLCPP_INFO(this->get_logger(), "[CRUISE] /multi_start accepted; starting cruise");
+    // ################################
+    // C++: lock actual single cruise start pose on explicit start
+    // ################################
+    start_x_ = current_x_;
+    start_y_ = current_y_;
     sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
   }
 
