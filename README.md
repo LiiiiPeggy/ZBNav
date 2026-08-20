@@ -138,6 +138,13 @@ The driver config is split for the two run modes (each a copy of the active
 - `control_command_relocalization.yaml` — `custom_map_mode: 2`, launched by
   `SLAM/3run_relocalization.sh` (Odin RViz on, publishes `/overall_map`).
 
+> **切换新地图（新保存的 `.bin`）时，需要同步修改两处路径：**
+> - `SLAM/src/odin_ros_driver/config/control_command_relocalization.yaml` →
+>   `relocalization_map_abs_path`（设备重定位加载的 `.bin` 地图）
+> - `SLAM/3run_relocalization.sh` → `overall_map_pcd`（发布为 `/overall_map` 的
+>   `.pcd`，需先用 `4trans2pcd.sh`（`.bin`→`.ply`）和 `5downsample.sh`
+>   （`.ply`→`.pcd`）从新 `.bin` 生成）
+
 `SLAM/showmap.sh` is a standalone offline viewer of the saved `.pcd` (starts
 its own `/overall_map` publisher + `overall_map.rviz`) — do not run it at the
 same time as `3run_relocalization.sh` (both would publish `/overall_map`).
