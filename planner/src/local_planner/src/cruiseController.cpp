@@ -1196,11 +1196,6 @@ private:
       res->success = true;
       res->message = "Starting repeat cruise";
       RCLCPP_INFO(this->get_logger(), "[REPEAT] /multi_start accepted; starting cruise");
-      // ################################
-      // C++: lock actual repeat cruise start pose on explicit start
-      // ################################
-      start_x_ = current_x_;
-      start_y_ = current_y_;
       completed_loops_ = 0;
       pending_stop_ = false;
       turning_internal_ = false;
@@ -1218,11 +1213,6 @@ private:
     res->success = true;
     res->message = "Starting single cruise";
     RCLCPP_INFO(this->get_logger(), "[CRUISE] /multi_start accepted; starting cruise");
-    // ################################
-    // C++: lock actual single cruise start pose on explicit start
-    // ################################
-    start_x_ = current_x_;
-    start_y_ = current_y_;
     sendWaypointAndGo(dest_x_, dest_y_, CruiseState::GO_TO_DEST);
   }
 
