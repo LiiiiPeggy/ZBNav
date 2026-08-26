@@ -8,7 +8,10 @@ Robotics navigation system: **LiDAR driver → SLAM → path planning + terrain 
 |-----------|----------|-------------|
 | `robosense_ws` | `rslidar_sdk`, `rslidar_msg` | RoboSense LiDAR driver (ROS 1 & 2 dual support) |
 | `rs_converter_ws` | `rs_converter` | RoboSense → Velodyne point cloud format converter |
-| `SLAM` | `basic`, `super_lio`, `odin_ros_driver` | SLAM + Odin depth sensor driver |
+<!-- ################################ -->
+<!-- Markdown: SLAM workspace now only contains the Odin driver -->
+<!-- ################################ -->
+| `SLAM` | `odin_ros_driver` | Odin depth sensor driver with built-in SLAM |
 | `LI_init_ws` | `lidar_imu_init` | LiDAR-IMU extrinsic calibration + FAST-LIO2 |
 | `planner` | `local_planner`, `terrain_analysis`, ... | Path planning, terrain analysis, cruise patrol |
 | `supports` | `Livox-SDK2`, `livox_ros_driver2` | Build dependencies |
@@ -16,17 +19,21 @@ Robotics navigation system: **LiDAR driver → SLAM → path planning + terrain 
 ### Pipeline
 
 ```
-rslidar_sdk → rs_converter → super_lio ──remap──▶ /state_estimation, /registered_scan ──▶ planner
-                                                         or
-                              odin_ros_driver ──remap──▶ /state_estimation, /registered_scan ──▶ planner
-                                                                        │
-                                              registered_scan_adapter_node (XYZRGB→XYZI + min-range filter)
-                                                                        │
-                                                                        ▼
-                                                               /registered_scan
+odin_ros_driver ──remap──▶ /state_estimation, /registered_scan ──▶ planner
+        │
+        └─ registered_scan_adapter_node (XYZRGB→XYZI + min-range filter)
+                                   │
+                                   ▼
+                          /registered_scan
 ```
 
-Two SLAM backends (super_lio + external LiDAR, or Odin with built-in SLAM) — both publish to the same standard topics via remap, interchangeable. When using Odin, `registered_scan_adapter_node` converts its `PointXYZRGB` cloud to the `PointXYZI` format that CMU planner expects and filters close-range points.
+<!-- ################################ -->
+<!-- Markdown: Odin is now the sole SLAM backend -->
+<!-- ################################ -->
+Odin's built-in SLAM is the single SLAM backend; it publishes to the CMU
+planner's standard topics via remap. `registered_scan_adapter_node` converts
+its `PointXYZRGB` cloud to the `PointXYZI` format the CMU planner expects and
+filters close-range points.
 
 ## Prerequisites
 
@@ -54,10 +61,8 @@ cd robosense_ws && colcon build --symlink-install
 # 2. Format converter
 cd rs_converter_ws && colcon build --symlink-install
 
-# 3. SLAM (basic first, then super_lio, then odin)
+# 3. SLAM (Odin driver)
 cd SLAM
-colcon build --symlink-install --packages-select basic
-colcon build --symlink-install --packages-select super_lio
 colcon build --symlink-install --packages-select odin_ros_driver
 
 # 4. Planner
@@ -72,21 +77,10 @@ colcon build --symlink-install
 
 ## Run
 
-### Option A: RoboSense LiDAR + super_lio + CMU planner
-
-```bash
-# Terminal 1: LiDAR pipeline
-source robosense_ws/install/setup.bash && ros2 launch rslidar_sdk start.py
-source rs_converter_ws/install/setup.bash && ros2 launch rs_converter rs_converter.launch.py
-
-# Terminal 2: SLAM (topic remap to /state_estimation, /registered_scan)
-source SLAM/install/setup.bash && ros2 launch super_lio velodyne.py
-
-# Terminal 3: Planning
-source planner/install/setup.bash && ros2 launch vehicle_simulator system_real_robot.launch
-```
-
-### Option B: Odin (built-in SLAM) + CMU planner
+<!-- ################################ -->
+<!-- Markdown: Odin is the sole run path after super_lio removal -->
+<!-- ################################ -->
+### Odin (built-in SLAM) + CMU planner
 
 ```bash
 # Terminal 1: Odin driver (topic remap to /state_estimation, /registered_scan)
@@ -109,20 +103,23 @@ Odin has three algorithm modes via `custom_map_mode` in
 
 **Save a map** (SLAM mode `1`): after driving the scene, run
 ```bash
-cd SLAM/src/odin_ros_driver && ./set_param.sh save_map 1
+cd SLAM && ./4savemap.sh        # shortcut; or cd SLAM/src/odin_ros_driver && ./set_param.sh save_map 1
 ```
 The `.bin` map is transferred from the device to
 `map/{map_save_time}/map_*.bin` (or `mapping_result_dest_dir` /
 `mapping_result_file_name` if set). Note this map is geometric only — it
 does **not** contain RGB color; it is for relocalization, not visualization.
 
+<!-- ################################ -->
+<!-- Markdown: rename bin->ply/ply->pcd scripts to 5bin2ply/6ply2pcd -->
+<!-- ################################ -->
 To view the map (or publish it as `/overall_map`), convert it to a PCD:
 ```bash
 cd SLAM
-bash 4trans2pcd.sh    # .bin -> .ply   (map_to_ply_arm64/amd64, auto-selected by arch)
-bash 5downsample.sh   # .ply -> .pcd   (map_downsample VoxelGrid, default leaf 0.05)
+bash 5bin2ply.sh   # .bin -> .ply   (map_to_ply_arm64/amd64, auto-selected by arch)
+bash 6ply2pcd.sh   # .ply -> .pcd   (map_downsample VoxelGrid, default leaf 0.05)
 ```
-`4trans2pcd.sh [input.bin] [output.ply]` / `5downsample.sh [input.ply] [output.pcd] [leaf_size]`,
+`5bin2ply.sh [input.bin] [output.ply]` / `6ply2pcd.sh [input.ply] [output.pcd] [leaf_size]`,
 both default to `map_20260807_151455.{bin,ply}` under `src/odin_ros_driver/map/`.
 
 **Relocalize** (mode `2`): set `relocalization_map_abs_path` to the saved
@@ -142,14 +139,14 @@ The driver config is split for the two run modes (each a copy of the active
 > - `SLAM/src/odin_ros_driver/config/control_command_relocalization.yaml` →
 >   `relocalization_map_abs_path`（设备重定位加载的 `.bin` 地图）
 > - `SLAM/3run_relocalization.sh` → `overall_map_pcd`（发布为 `/overall_map` 的
->   `.pcd`，需先用 `4trans2pcd.sh`（`.bin`→`.ply`）和 `5downsample.sh`
+>   `.pcd`，需先用 `5bin2ply.sh`（`.bin`→`.ply`）和 `6ply2pcd.sh`
 >   （`.ply`→`.pcd`）从新 `.bin` 生成）
 
 `SLAM/showmap.sh` is a standalone offline viewer of the saved `.pcd` (starts
 its own `/overall_map` publisher + `overall_map.rviz`) — do not run it at the
 same time as `3run_relocalization.sh` (both would publish `/overall_map`).
 
-### Option C: Odin + one-click scripts
+### One-click scripts
 
 Convenience scripts live in the workspace root (`1.sh`) and `planner/`:
 
@@ -167,8 +164,9 @@ Convenience scripts live in the workspace root (`1.sh`) and `planner/`:
 | `planner/9multi_debug.sh` | MULTI cruise, full output |
 | `SLAM/2run_slam.sh` | Odin SLAM mapping (mode 1), Odin RViz on, no `/overall_map` |
 | `SLAM/3run_relocalization.sh` | Odin relocalization (mode 2), Odin RViz on, publishes `/overall_map` |
-| `SLAM/4trans2pcd.sh` | Convert saved `.bin` map to `.ply` via `map_to_ply` (arm64/amd64 auto-selected) |
-| `SLAM/5downsample.sh` | Downsample `.ply` → `.pcd` via `map_downsample` VoxelGrid (default leaf 0.05) |
+| `SLAM/4savemap.sh` | Save the Odin SLAM map (writes `set save_map 1`; driver must be running in SLAM mode) |
+| `SLAM/5bin2ply.sh` | Convert saved `.bin` map to `.ply` via `map_to_ply` (arm64/amd64 auto-selected) |
+| `SLAM/6ply2pcd.sh` | Downsample `.ply` → `.pcd` via `map_downsample` VoxelGrid (default leaf 0.05) |
 | `SLAM/showmap.sh` | Standalone saved-map viewer — `bash showmap.sh [map.pcd]` (optional PCD path, default the prebuilt map); starts its own `/overall_map` + `overall_map.rviz` |
 
 ## Cruise Patrol (往返巡航)
@@ -311,7 +309,6 @@ ros2 topic info /way_point -v           # publisher: cruise_controller / subscri
 
 ## License
 
-- `super_lio`, `basic`: GPLv3
 - `lidar_imu_init`: BSD
 - `rslidar_sdk`: BSD
 - `rs_converter`: Apache 2.0
