@@ -1,5 +1,10 @@
 name: work_compile
 
+x-env-files: &env-files
+  - ${ENV_DIR}/ros2.env
+  - ${ENV_DIR}/timezone.env
+  - ${ENV_DIR}/ywz/runtime.env
+
 services:
 
   compile:
@@ -16,23 +21,15 @@ services:
 
     privileged: true
 
-    environment:
-      ROS_DOMAIN_ID: "60"
-      FASTRTPS_DEFAULT_PROFILES_FILE: /root/env/ros2/rk3588_eth_binding.xml
+    ulimits:
+      core: 0
 
-      TZ: Asia/Shanghai
-      LANG: en_US.UTF-8
-      LC_ALL: en_US.UTF-8
-
-      # Keep library internal threading controlled.
-      # colcon/CMake compilation parallelism is controlled separately.
-      OMP_NUM_THREADS: "1"
-      MKL_NUM_THREADS: "1"
+    env_file: *env-files
 
     volumes:
       - /dev:/dev:rw
 
-      - /home/siasun/panda3_2026_07_17/panda3/docker/env/ros2:/root/env/ros2:ro
+      - ${ENV_DIR}/ros2/:/root/env/ros2:ro
 
       # ################################
       # Docker: share LQP workspace with Odin1 and navigation

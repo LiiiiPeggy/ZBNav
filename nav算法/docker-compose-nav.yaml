@@ -2,6 +2,11 @@ version: "3.8"
 
 name: work_nav
 
+x-env-files: &env-files
+  - ${ENV_DIR}/ros2.env
+  - ${ENV_DIR}/timezone.env
+  - ${ENV_DIR}/ywz/runtime.env
+
 services:
 
   nav_gui:
@@ -18,21 +23,15 @@ services:
 
     privileged: true
 
+    ulimits:
+      core: 0
+
+    env_file: *env-files
+
     environment:
       DISPLAY: ${DISPLAY}
       XAUTHORITY: /root/.Xauthority
       QT_X11_NO_MITSHM: "1"
-
-      ROS_DOMAIN_ID: "60"
-      FASTRTPS_DEFAULT_PROFILES_FILE: /root/env/ros2/rk3588_eth_binding.xml
-
-      TZ: Asia/Shanghai
-      LANG: en_US.UTF-8
-      LC_ALL: en_US.UTF-8
-
-      # Navigation is intentionally restricted to one CPU core.
-      OMP_NUM_THREADS: "1"
-      MKL_NUM_THREADS: "1"
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -40,7 +39,7 @@ services:
 
       - /dev:/dev:rw
 
-      - /home/siasun/panda3_2026_07_17/panda3/docker/env/ros2:/root/env/ros2:ro
+      - ${ENV_DIR}/ros2/:/root/env/ros2:ro
 
       # ################################
       # Docker: mount LQP workspace

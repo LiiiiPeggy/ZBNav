@@ -79,8 +79,8 @@ docker exec -it nav_gui bash
 # ============================================================
 # 1. 系统依赖 (一次性)
 # ============================================================
-sudo apt update && apt install -y x11-apps libpcap-dev ros-humble-pcl-conversions libpcl-dev libeigen3-dev libgoogle-glog-dev libtbb-dev ros-humble-pcl-ros libceres-dev ros-humble-rmw-cyclonedds-cpp usbutils
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+sudo apt update && apt install -y libpcap-dev ros-humble-pcl-conversions libpcl-dev libeigen3-dev libgoogle-glog-dev libtbb-dev ros-humble-pcl-ros libceres-dev ros-humble-rmw-cyclonedds-cpp usbutils
+# export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # ============================================================
 # 2. 编译 Supports (Livox SDK + ROS2 Driver)
