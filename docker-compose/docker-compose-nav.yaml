@@ -70,7 +70,7 @@ services:
           libtbb-dev \
           ros-humble-pcl-ros \
           libceres-dev \
-          ros-humble-rmw-cyclonedds-cpp
+
 
         source /opt/ros/humble/setup.bash
 
